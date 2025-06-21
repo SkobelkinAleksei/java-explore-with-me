@@ -1,6 +1,13 @@
+# Исключить class файлы
 *.class
-*.log
+
+# Исключить jar файлы
 *.jar
+
+# Исключить системные файлы macOS
+.DS_Store
+
+*.log
 *.war
 *.nar
 *.ear
