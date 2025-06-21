@@ -1,13 +1,13 @@
-package ru.practicum.stats;
+package ru.practicum.statsclient;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class StatsApplicationTests {
+public class StatsClientApplicationTests {
 
     @Test
     void contextLoads() {
-    }
 
+    }
 }
