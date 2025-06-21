@@ -8,6 +8,5 @@ public class StatsClientApplicationTests {
 
     @Test
     void contextLoads() {
-
     }
 }
