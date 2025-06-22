@@ -21,14 +21,10 @@ public class StatsController {
     private final StatsService statsService;
 
     @PostMapping("/hit")
-    public ResponseEntity<String> saveHits(@RequestBody EndpointHitDto endpointHitDto) {
-        String saveHits = statsService.saveHits(endpointHitDto);
-        var location = ServletUriComponentsBuilder.fromCurrentRequest()
-                .replacePath("/hit")
-                .build()
-                .toUri();
+    public ResponseEntity<EndpointHitDto> saveHits(@RequestBody EndpointHitDto endpointHitDto) {
+        EndpointHitDto saveHits = statsService.saveHits(endpointHitDto);
 
-        return ResponseEntity.created(location).body(saveHits);
+        return ResponseEntity.ok().body(saveHits);
     }
 
     @GetMapping("/stats")

@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.statsdto.EndpointHitDto;
 import ru.practicum.statsdto.ViewStats;
 import ru.practicum.statsservice.mapper.EndpointHitMapper;
+import ru.practicum.statsservice.model.EndpointHit;
 import ru.practicum.statsservice.repository.StatsRepository;
 
 import java.time.LocalDateTime;
@@ -17,13 +18,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StatsService {
     private final StatsRepository statsRepository;
-    private static final String CORRECT_RESPONSE = "Информация сохранена";
 
     @Transactional
-    public String saveHits(EndpointHitDto endpointHitDto) {
-        statsRepository.save(EndpointHitMapper.toEntity(endpointHitDto));
+    public EndpointHitDto saveHits(EndpointHitDto endpointHitDto) {
+        EndpointHit endpointHit = statsRepository.save(EndpointHitMapper.toEntity(endpointHitDto));
 
-        return CORRECT_RESPONSE;
+        return EndpointHitMapper.toDto(endpointHit);
     }
 
     @Transactional(readOnly = true)
