@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS hits CASCADE;
+
+CREATE TABLE IF NOT EXISTS hits(
+    id BIGINT PRIMARY KEY,
+    app VARCHAR(255),
+    uri VARCHAR(255),
+    ip VARCHAR(55),
+    timestamp TIMESTAMP
+);
