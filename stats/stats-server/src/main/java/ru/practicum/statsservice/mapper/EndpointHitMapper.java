@@ -14,7 +14,7 @@ public class EndpointHitMapper {
                 endpointHitDto.getIp(),
                 endpointHitDto.getTimestamp()
         );
-    };
+    }
 
     public EndpointHitDto toDto(EndpointHit endpointHit) {
         return new EndpointHitDto(
@@ -23,5 +23,5 @@ public class EndpointHitMapper {
                 endpointHit.getIp(),
                 endpointHit.getTimestamp()
         );
-    };
+    }
 }

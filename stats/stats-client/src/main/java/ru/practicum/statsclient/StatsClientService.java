@@ -44,7 +44,7 @@ public class StatsClientService {
 
         urlResult.append("start=").append(start.format(formatter));
         urlResult.append("&end=").append(end.format(formatter)).append("&");
-        for(String str : uris) {
+        for (String str : uris) {
             urlResult.append("uris=").append(str).append("&");
         }
         urlResult.append("&unique=").append(unique);
