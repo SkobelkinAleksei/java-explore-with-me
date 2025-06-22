@@ -24,7 +24,7 @@ public class StatsClientService {
         this.restTemplate = new RestTemplate();
     }
 
-    public ResponseEntity<?> saveHit(EndpointHitDto endpointHitDto) {
+    public ResponseEntity<Object> saveHit(EndpointHitDto endpointHitDto) {
         log.info("Вызываем метод saveHit из clientService {}", endpointHitDto);
         try {
             ResponseEntity<Object> response = restTemplate.postForEntity(url.concat("/hit"),
@@ -36,10 +36,10 @@ public class StatsClientService {
         }
     }
 
-    public ResponseEntity<?> getStats(LocalDateTime start,
-                                      LocalDateTime end,
-                                      List<String> uris,
-                                      Boolean unique) {
+    public ResponseEntity<Object> getStats(LocalDateTime start,
+                                           LocalDateTime end,
+                                           List<String> uris,
+                                           Boolean unique) {
         StringBuilder urlResult = new StringBuilder(url.concat("/stats?"));
 
         urlResult.append("start=").append(start.format(formatter));
