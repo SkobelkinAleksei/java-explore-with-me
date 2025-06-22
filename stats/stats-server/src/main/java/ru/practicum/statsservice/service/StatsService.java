@@ -10,6 +10,7 @@ import ru.practicum.statsservice.mapper.EndpointHitMapper;
 import ru.practicum.statsservice.model.EndpointHit;
 import ru.practicum.statsservice.repository.StatsRepository;
 
+import java.time.DateTimeException;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -33,7 +34,7 @@ public class StatsService {
                                      Boolean unique) {
         log.info("Вызываем метод findStats с параметрами %t %t %d %b", start, end, uris, unique);
 
-        if (!isDataCorrect(start, end)) throw new IllegalArgumentException("Неверный формат даты");
+        if (!isDataCorrect(start, end)) throw new DateTimeException("Неверный формат даты");
 
         if (unique) {
             if (uris != null) {
