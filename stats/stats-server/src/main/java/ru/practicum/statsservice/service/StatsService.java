@@ -34,7 +34,7 @@ public class StatsService {
                                      Boolean unique) {
         log.info("Вызываем метод findStats с параметрами %t %t %d %b", start, end, uris, unique);
 
-        if (!isDataCorrect(start, end)) throw new DateTimeException("Неверный формат даты");
+        if (isDataCorrect(start, end)) throw new DateTimeException("Неверный формат даты");
 
         if (unique) {
             if (uris != null) {
