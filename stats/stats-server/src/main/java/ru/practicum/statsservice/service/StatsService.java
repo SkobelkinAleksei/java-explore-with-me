@@ -36,14 +36,14 @@ public class StatsService {
         if (!isDataCorrect(start, end)) throw new IllegalArgumentException("Неверный формат даты");
 
         if (unique) {
-            if (uris != null && !uris.isEmpty()) {
-                return statsRepository.findUniqueWithUrisStats(start, end, uris);
+            if (uris != null) {
+                return statsRepository.findUniqueWithUrisStats(uris, start, end);
             }
 
             return statsRepository.findUniqueAndNoUrisStats(start, end);
         } else {
-            if (uris != null && !uris.isEmpty()) {
-                return statsRepository.findNoUniqueWithUrisStats(start, end, uris);
+            if (uris != null) {
+                return statsRepository.findNoUniqueWithUrisStats(uris, start, end);
             }
 
             return statsRepository.findNoUniqueAndNoUrisStats(start, end);

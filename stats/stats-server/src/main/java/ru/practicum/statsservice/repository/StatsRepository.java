@@ -28,7 +28,7 @@ public interface StatsRepository extends JpaRepository<EndpointHit, Long> {
         GROUP BY eh.app, eh.uri
         ORDER BY COUNT(DISTINCT eh.ip) DESC
      """)
-    List<ViewStats> findUniqueWithUrisStats(LocalDateTime start, LocalDateTime end, List<String> uris);
+    List<ViewStats> findUniqueWithUrisStats(List<String> uris, LocalDateTime start, LocalDateTime end);
 
     @Query("""
         SELECT new ru.practicum.statsdto.ViewStats(eh.app, eh.uri, COUNT(DISTINCT eh.ip))
@@ -46,5 +46,5 @@ public interface StatsRepository extends JpaRepository<EndpointHit, Long> {
         GROUP BY eh.app, eh.uri
         ORDER BY COUNT(eh.uri) DESC
      """)
-    List<ViewStats> findNoUniqueWithUrisStats(LocalDateTime start, LocalDateTime end, List<String> uris);
+    List<ViewStats> findNoUniqueWithUrisStats(List<String> uris, LocalDateTime start, LocalDateTime end);
 }
