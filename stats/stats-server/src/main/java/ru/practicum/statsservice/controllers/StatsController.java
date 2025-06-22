@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import ru.practicum.statsdto.EndpointHitDto;
 import ru.practicum.statsdto.ViewStats;
 import ru.practicum.statsservice.service.StatsService;
