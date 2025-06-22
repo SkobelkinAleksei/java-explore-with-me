@@ -26,7 +26,7 @@ public interface StatsRepository extends JpaRepository<EndpointHit, Long> {
         FROM EndpointHit as eh
         WHERE eh.uri IN (?1) AND eh.timestamp BETWEEN ?2 AND ?3
         GROUP BY eh.app, eh.uri
-        ORDER BY COUNT(eh.uri) DESC
+        ORDER BY COUNT(DISTINCT eh.ip) DESC
      """)
     List<ViewStats> findUniqueWithUrisStats(LocalDateTime start, LocalDateTime end, List<String> uris);
 
@@ -35,7 +35,7 @@ public interface StatsRepository extends JpaRepository<EndpointHit, Long> {
         FROM EndpointHit as eh
         WHERE eh.timestamp BETWEEN ?1 AND ?2
         GROUP BY eh.app, eh.uri
-        ORDER BY COUNT(eh.uri) DESC
+        ORDER BY COUNT(DISTINCT eh.ip) DESC
      """)
     List<ViewStats> findUniqueAndNoUrisStats(LocalDateTime start, LocalDateTime end);
 
