@@ -19,13 +19,16 @@ public class EndpointHit {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String app;
 
+    @Column(nullable = false)
     private String uri;
 
+    @Column(nullable = false)
     private String ip;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime timestamp;
 
     public EndpointHit(String app, String uri, String ip, LocalDateTime timestamp) {
