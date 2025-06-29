@@ -1,0 +1,83 @@
+package ru.practicum.main.mapper;
+
+import lombok.experimental.UtilityClass;
+import ru.practicum.main.model.category.CategoryDto;
+import ru.practicum.main.model.category.CategoryEntity;
+import ru.practicum.main.model.event.*;
+import ru.practicum.main.model.location.LocationEntity;
+import ru.practicum.main.model.user.UserEntity;
+import ru.practicum.main.model.user.UserShortDto;
+
+import java.time.LocalDateTime;
+
+@UtilityClass
+public class EventMapper {
+
+    private final Integer DEFAULT_VIEWS = 0;
+    private final Integer CONFIRMED_REQUESTS = 0;
+
+    public EventShortDto toShortEventDto(EventEntity event, UserShortDto userShortDto) {
+        return EventShortDto.builder()
+                .id(event.getId())
+                .annotation(event.getAnnotation())
+                .category(event.getCategory().getName())
+                .eventDate(event.getEventDate().toString())
+                .initiator(userShortDto)
+                .paid(event.getPaid())
+                .title(event.getTitle())
+                .build();
+    }
+
+    public EventFullDto toEventFullDto(EventEntity eventEntity,
+                                       UserShortDto userShortDto,
+                                       CategoryDto categoryDto,
+                                       LocationEntity location
+    ) {
+        Boolean requestModeration = eventEntity.getRequestModeration();
+
+        return EventFullDto.builder()
+                .id(eventEntity.getId())
+                .annotation(eventEntity.getAnnotation())
+                .initiator(userShortDto)
+                .category(categoryDto)
+                .location(location)
+                .eventDate(eventEntity.getEventDate().toString())
+                .createdOn(eventEntity.getCreatedOn().toString())
+                .publishedOn(null)
+                .state(requestModeration ? eventEntity.getState().getName() : null)
+                .paid(eventEntity.getPaid())
+                .requestModeration(eventEntity.getRequestModeration())
+                .participantLimit(eventEntity.getParticipantLimit())
+                .views(DEFAULT_VIEWS)
+                .confirmedRequests(CONFIRMED_REQUESTS)
+                .description(eventEntity.getDescription())
+                .title(eventEntity.getTitle())
+                .build();
+    }
+
+    public EventEntity toEntity(NewEventDto newEventDto,
+                                CategoryEntity categoryEntity,
+                                LocationEntity locationEntity,
+                                UserEntity userEntity
+    ) {
+        State pending = null;
+
+        if (newEventDto.getRequestModeration()) {
+            pending = State.valueOf("PENDING");
+        }
+        return EventEntity.builder()
+                .initiator(userEntity)
+                .category(categoryEntity)
+                .location(locationEntity)
+                .eventDate(LocalDateTime.parse(newEventDto.getEventDate()))
+                .state(pending)
+                .paid(newEventDto.getPaid())
+                .requestModeration(newEventDto.getRequestModeration())
+                .participantLimit(newEventDto.getParticipantLimit())
+                .annotation(newEventDto.getAnnotation())
+                .description(newEventDto.getDescription())
+                .title(newEventDto.getTitle())
+                .createdOn(LocalDateTime.now())
+                .build();
+    }
+}
