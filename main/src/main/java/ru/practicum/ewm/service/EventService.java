@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.ewm.exeption.ForbiddenException;
 import ru.practicum.ewm.mapper.CategoryMapper;
 import ru.practicum.ewm.mapper.EventMapper;
 import ru.practicum.ewm.mapper.LocationMapper;
@@ -246,7 +248,10 @@ public class EventService {
 
 
     @Transactional
-    public EventFullDto createEvent(Long userId, NewEventDto newEventDto) {
+    public EventFullDto createEvent(
+            Long userId, NewEventDto newEventDto
+    ) throws ForbiddenException, NumberFormatException, ConstraintViolationException
+    {
         log.info("Создание нового события пользователя с id: {}. Данные события: {}", userId, newEventDto);
 
         CategoryEntity categoryEntity = categoriesRepository.findById(newEventDto.getCategory())

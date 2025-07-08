@@ -15,7 +15,8 @@ import java.util.Arrays;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({NumberFormatException.class,
+    @ExceptionHandler({
+            NumberFormatException.class,
             DataIntegrityViolationException.class,
             ConstraintViolationException.class,
             MethodArgumentNotValidException.class})
@@ -39,7 +40,7 @@ public class GlobalExceptionHandler {
             CategoryAlreadyExists.class,
             EntityNotFoundException.class
     })
-    public ResponseEntity<ApiError> handleForbiddenException(ForbiddenException e) {
+    public ResponseEntity<ApiError> handleForbiddenException(Exception e) {
         ApiError error = ApiError.builder()
                 .errors(
                         Arrays.stream(e.getStackTrace())
