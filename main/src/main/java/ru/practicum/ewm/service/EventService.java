@@ -249,9 +249,9 @@ public class EventService {
 
     @Transactional
     public EventFullDto createEvent(
-            Long userId, NewEventDto newEventDto
-    ) throws ForbiddenException, NumberFormatException, ConstraintViolationException
-    {
+            Long userId,
+            NewEventDto newEventDto
+    ) throws ForbiddenException, NumberFormatException, ConstraintViolationException {
         log.info("Создание нового события пользователя с id: {}. Данные события: {}", userId, newEventDto);
 
         CategoryEntity categoryEntity = categoriesRepository.findById(newEventDto.getCategory())

@@ -14,7 +14,6 @@ import ru.practicum.ewm.model.location.LocationEntity;
 @NoArgsConstructor
 @Builder
 public class NewEventDto {
-    //TODO прописать валидацию
 
     @Size(min = 20, max = 2000)
     private String annotation;
