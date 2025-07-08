@@ -1,14 +1,15 @@
-//package ru.practicum.statsserver;
+//package ru.practicum.ewm;
 //
 //import org.junit.jupiter.api.Disabled;
 //import org.junit.jupiter.api.Test;
 //import org.springframework.boot.test.context.SpringBootTest;
 //
 //@SpringBootTest
-//@Disabled("Тесты временно отключены")
-//public class StatsServerApplicationTests {
+//@Disabled("Временно не работает")
+//class MainApplicationTests {
 //
 //    @Test
 //    void contextLoads() {
 //    }
+//
 //}
