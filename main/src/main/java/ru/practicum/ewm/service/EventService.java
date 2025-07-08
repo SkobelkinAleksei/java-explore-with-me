@@ -25,7 +25,7 @@ import ru.practicum.ewm.repository.LocationRepository;
 import ru.practicum.ewm.repository.UserRepository;
 import ru.practicum.ewm.utils.DefaultMessagesForException;
 import ru.practicum.ewm.utils.EventServiceHelper;
-import ru.practicum.statsclient.StatsClientService;
+import ru.practicum.statsclient.StatsClient;
 import ru.practicum.statsdto.EndpointHitDto;
 import ru.practicum.statsdto.ViewStats;
 
@@ -50,7 +50,7 @@ public class EventService {
 
     private final EventServiceHelper eventServiceHelper;
 
-    private final StatsClientService statsClientService;
+    private final StatsClient statsClient;
 
     private static final String APP = "ewm-main-service";
 
@@ -173,7 +173,7 @@ public class EventService {
                 LocalDateTime.now()
         );
 
-        statsClientService.saveHit(endpointHitDto);
+        statsClient.saveHit(endpointHitDto);
 
         return EventMapper.toEventFullDto(
                 eventEntity,
@@ -363,7 +363,7 @@ public class EventService {
     }
 
     private List<ViewStats> getViewStats(HttpServletRequest request, EventEntity eventEntity) {
-        ResponseEntity<?> responseStats = statsClientService.getStats(
+        ResponseEntity<?> responseStats = statsClient.getStats(
                 eventEntity.getCreatedOn(),
                 LocalDateTime.now(),
                 List.of(request.getRequestURI()),

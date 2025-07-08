@@ -3,7 +3,7 @@ package ru.practicum.statsclient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import ru.practicum.statsdto.EndpointHitDto;
@@ -13,14 +13,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Slf4j
-@Service
-public class StatsClientService {
+@Component
+public class StatsClient {
     @Value("${client.url}")
     private String url;
     private final RestTemplate restTemplate;
     private DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public StatsClientService() {
+    public StatsClient() {
         this.restTemplate = new RestTemplate();
     }
 
