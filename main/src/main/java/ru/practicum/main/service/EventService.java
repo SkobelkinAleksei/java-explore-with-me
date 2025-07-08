@@ -137,8 +137,6 @@ public class EventService {
 
                     return EventMapper.toShortEventDto(eventEntity, UserMapper.toUserShortDto(userEntity));
                 }).toList();
-
-
     }
 
     @Transactional(readOnly = true)
@@ -365,7 +363,7 @@ public class EventService {
     }
 
     private List<ViewStats> getViewStats(HttpServletRequest request, EventEntity eventEntity) {
-        ResponseEntity<Object> responseStats = statsClientService.getStats(
+        ResponseEntity<?> responseStats = statsClientService.getStats(
                 eventEntity.getCreatedOn(),
                 LocalDateTime.now(),
                 List.of(request.getRequestURI()),

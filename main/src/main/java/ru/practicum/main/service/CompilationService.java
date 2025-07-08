@@ -115,6 +115,17 @@ public class CompilationService {
         return CompilationMapper.toDto(updatedCompilation, eventShortDtos);
     }
 
+    @Transactional(readOnly = true)
+    public List<CompilationDto> findAll(Boolean pinned, Integer from, Integer size) {
+        PageRequest pageRequest = eventServiceHelper.getPageRequest(from, size);
+        if (nonNull(pinned)) {
+            List<CompilationEntity> allPinned = compilationRepository.findAllPinned(true, pageRequest);
+            return getCompilationDtos(allPinned);
+        }
+
+        List<CompilationEntity> allCompilationEntities = compilationRepository.findAllWithPagination(pageRequest);
+        return getCompilationDtos(allCompilationEntities);
+    }
 
     private List<EventShortDto> getEventShortDtos(Set<EventEntity> eventEntitiesByIds) {
         return eventEntitiesByIds
@@ -130,18 +141,6 @@ public class CompilationService {
                     return EventMapper.toAdminShortEventDto(event, UserMapper.toUserShortDto(userEntity));
                 })
                 .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<CompilationDto> findAll(Boolean pinned, Integer from, Integer size) {
-        PageRequest pageRequest = eventServiceHelper.getPageRequest(from, size);
-        if (nonNull(pinned)) {
-            List<CompilationEntity> allPinned = compilationRepository.findAllPinned(true, pageRequest);
-            return getCompilationDtos(allPinned);
-        }
-
-        List<CompilationEntity> allCompilationEntities = compilationRepository.findAllWithPagination(pageRequest);
-        return getCompilationDtos(allCompilationEntities);
     }
 
     private List<CompilationDto> getCompilationDtos(List<CompilationEntity> allCompilationEntities) {

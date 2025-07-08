@@ -24,7 +24,7 @@ public class CategoryAdminController {
     }
 
     @DeleteMapping("/{catId}")
-    public ResponseEntity<HttpStatus> deleteCategory(@PathVariable Long catId) {
+    public ResponseEntity<HttpStatus> deletedCategory(@PathVariable Long catId) {
         log.info("Поступил запрос на удаление категории с id: {}", catId);
         categoriesService.deleteCategory(catId);
         log.info("Категория с id: {} успешно удалена", catId);
@@ -32,11 +32,10 @@ public class CategoryAdminController {
     }
 
     @PatchMapping("/{catId}")
-    public ResponseEntity<CategoryDto> updateCategory(
+    public ResponseEntity<CategoryDto> updatedCategory(
             @PathVariable Long catId,
             @RequestBody CategoryDto categoryDto
     ) {
         return ResponseEntity.ok().body(categoriesService.updateCategory(catId, categoryDto));
     }
-
 }
