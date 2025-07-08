@@ -373,7 +373,6 @@ public class EventService {
         );
 
         ObjectMapper mapper = new ObjectMapper();
-
         return mapper.convertValue(
                 responseStats.getBody(),
                 new TypeReference<>() {
