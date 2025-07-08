@@ -31,4 +31,12 @@ public class CategoryAdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{catId}")
+    public ResponseEntity<CategoryDto> updateCategory(
+            @PathVariable Long catId,
+            @RequestBody CategoryDto categoryDto
+    ) {
+        return ResponseEntity.ok().body(categoriesService.updateCategory(catId, categoryDto));
+    }
+
 }

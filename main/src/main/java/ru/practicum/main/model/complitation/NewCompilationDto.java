@@ -12,6 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class NewCompilationDto {
+    @NotBlank(message = "Список событий не может быть пустым.")
     private List<Long> events;
     private Boolean pinned;
 

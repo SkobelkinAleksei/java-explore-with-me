@@ -1,6 +1,5 @@
 package ru.practicum.main.model.category;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -8,6 +7,7 @@ import lombok.*;
 @Table(name = "categories")
 @Getter
 @Setter
+@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder

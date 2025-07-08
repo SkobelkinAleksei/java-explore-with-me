@@ -18,7 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/admin/users")
 @RequiredArgsConstructor
-public class UserController {
+public class UserAdminController {
     private final UserService userService;
 
     @PostMapping
@@ -28,9 +28,10 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<List<UserDto>> getUsers(@RequestParam(required = false) List<Integer> ids,
-                                  @RequestParam(required = false, defaultValue = "0") @PositiveOrZero Integer from,
-                                  @RequestParam(required = false, defaultValue = "10") @Positive Integer size
+    public ResponseEntity<List<UserDto>> getUsers(
+            @RequestParam(required = false) List<Integer> ids,
+            @RequestParam(required = false, defaultValue = "0") @PositiveOrZero Integer from,
+            @RequestParam(required = false, defaultValue = "10") @Positive Integer size
     ) {
         log.info("Получен запрос на получение пользователей. ids: {}, from: {}, size: {}", ids, from, size);
         return ResponseEntity.ok().body(userService.getUsers(ids, from, size));

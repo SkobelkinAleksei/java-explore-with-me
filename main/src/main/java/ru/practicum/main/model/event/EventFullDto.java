@@ -1,19 +1,23 @@
 package ru.practicum.main.model.event;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import ru.practicum.main.model.category.CategoryDto;
-import ru.practicum.main.model.location.LocationEntity;
+import ru.practicum.main.model.location.LocationDto;
 import ru.practicum.main.model.user.UserShortDto;
 
+import static ch.qos.logback.core.joran.JoranConstants.NULL;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@JsonIgnoreProperties(value = NULL)
 public class EventFullDto {
+
     private Long id;
 
     private String annotation;
@@ -22,7 +26,7 @@ public class EventFullDto {
 
     private CategoryDto category;
 
-    private LocationEntity location;
+    private LocationDto location;
 
     private String eventDate;
 
@@ -38,7 +42,7 @@ public class EventFullDto {
 
     private Integer participantLimit;
 
-    private Integer views;
+    private Long views;
 
     private Integer confirmedRequests;
 

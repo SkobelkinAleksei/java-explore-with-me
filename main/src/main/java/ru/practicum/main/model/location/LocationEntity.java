@@ -7,6 +7,7 @@ import lombok.*;
 @Table(name = "location")
 @Getter
 @Setter
+@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder

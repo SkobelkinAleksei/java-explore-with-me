@@ -1,5 +1,6 @@
 package ru.practicum.main.model.complitation;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,8 @@ import java.util.List;
 public class CompilationDto {
     private Long id;
     private Boolean pinned;
+
+    @NotBlank(message = "Пустая строка.")
     private String title;
     private List<EventShortDto> events;
 }

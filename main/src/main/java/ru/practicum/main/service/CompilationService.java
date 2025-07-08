@@ -3,7 +3,8 @@ package ru.practicum.main.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.main.mapper.CompilationMapper;
@@ -16,12 +17,19 @@ import ru.practicum.main.model.complitation.UpdateCompilationRequest;
 import ru.practicum.main.model.event.EventEntity;
 import ru.practicum.main.model.event.EventShortDto;
 import ru.practicum.main.model.user.UserEntity;
+import ru.practicum.main.model.user.UserShortDto;
 import ru.practicum.main.repository.CompilationRepository;
 import ru.practicum.main.repository.EventRepository;
 import ru.practicum.main.repository.UserRepository;
+import ru.practicum.main.utils.DefaultMessagesForException;
+import ru.practicum.main.utils.EventServiceHelper;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 
 @Slf4j
 @Service
@@ -31,14 +39,34 @@ public class CompilationService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
 
+    private final EventServiceHelper eventServiceHelper;
+
+    @Transactional(readOnly = true)
+    public CompilationDto getCompilationById(Long compId) throws NumberFormatException {
+
+        CompilationEntity compilationEntity = compilationRepository.findById(compId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException(DefaultMessagesForException.COMPILATION_NOT_FOUND)
+                );
+
+        List<EventShortDto> eventShortDtos = compilationEntity.getEvents().stream()
+                .map(eventEntity ->
+                        EventMapper.toShortEventDto(
+                                eventEntity, UserMapper.toUserShortDto(eventEntity.getInitiator())
+                        ))
+                .toList();
+
+        return CompilationMapper.toDto(compilationEntity, eventShortDtos);
+    }
+
     @Transactional
-    public CompilationDto saveCompilation(NewCompilationDto compilation) throws DataIntegrityViolationException {
+    public CompilationDto saveCompilation(
+            NewCompilationDto compilation
+    ) throws ConstraintViolationException {
+        if (isNull(compilation)) throw new IllegalArgumentException(DefaultMessagesForException.COMPILATION_IS_NULL);
+
         log.info("Создание новой подборки: {}", compilation);
         CompilationEntity compilationEntity = CompilationMapper.toEntity(compilation);
-
-        if (compilation.getEvents() == null) {
-            throw new IllegalArgumentException("События не найдены.");
-        }
 
         Set<EventEntity> eventEntitiesByIds = eventRepository.findEventEntitiesByIds(compilation.getEvents());
         log.debug("Найдено {} событий для подборки", eventEntitiesByIds.size());
@@ -99,7 +127,34 @@ public class CompilationService {
                             () -> new EntityNotFoundException("Инициатор с таким id %s не найден".formatted(initiatorId))
                     );
 
-                    return EventMapper.toShortEventDto(event, UserMapper.toUserShortDto(userEntity));
+                    return EventMapper.toAdminShortEventDto(event, UserMapper.toUserShortDto(userEntity));
+                })
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CompilationDto> findAll(Boolean pinned, Integer from, Integer size) {
+        PageRequest pageRequest = eventServiceHelper.getPageRequest(from, size);
+        if (nonNull(pinned)) {
+            List<CompilationEntity> allPinned = compilationRepository.findAllPinned(true, pageRequest);
+            return getCompilationDtos(allPinned);
+        }
+
+        List<CompilationEntity> allCompilationEntities = compilationRepository.findAllWithPagination(pageRequest);
+        return getCompilationDtos(allCompilationEntities);
+    }
+
+    private List<CompilationDto> getCompilationDtos(List<CompilationEntity> allCompilationEntities) {
+        return allCompilationEntities.isEmpty()
+                ? Collections.emptyList()
+                : allCompilationEntities.stream()
+                .map(compilationEntity -> {
+                    List<EventShortDto> eventShortDtos = compilationEntity.getEvents().stream()
+                            .map(eventEntity -> {
+                                UserShortDto userShortDto = UserMapper.toUserShortDto(eventEntity.getInitiator());
+                                return EventMapper.toShortEventDto(eventEntity, userShortDto);
+                            }).toList();
+                    return CompilationMapper.toDto(compilationEntity, eventShortDtos);
                 })
                 .toList();
     }

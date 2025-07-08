@@ -4,17 +4,31 @@ import lombok.experimental.UtilityClass;
 import ru.practicum.main.model.category.CategoryDto;
 import ru.practicum.main.model.category.CategoryEntity;
 import ru.practicum.main.model.event.*;
+import ru.practicum.main.model.location.LocationDto;
 import ru.practicum.main.model.location.LocationEntity;
 import ru.practicum.main.model.user.UserEntity;
 import ru.practicum.main.model.user.UserShortDto;
 
 import java.time.LocalDateTime;
 
+import static java.util.Objects.isNull;
+
 @UtilityClass
 public class EventMapper {
-
     private final Integer DEFAULT_VIEWS = 0;
     private final Integer CONFIRMED_REQUESTS = 0;
+
+    public EventShortDto toAdminShortEventDto(EventEntity event, UserShortDto userShortDto) {
+        return EventShortDto.builder()
+                .id(event.getId())
+                .annotation(event.getAnnotation())
+                .category(event.getCategory().getName())
+                .eventDate(event.getEventDate().toString())
+                .initiator(userShortDto)
+                .paid(event.getPaid())
+                .title(event.getTitle())
+                .build();
+    }
 
     public EventShortDto toShortEventDto(EventEntity event, UserShortDto userShortDto) {
         return EventShortDto.builder()
@@ -31,9 +45,9 @@ public class EventMapper {
     public EventFullDto toEventFullDto(EventEntity eventEntity,
                                        UserShortDto userShortDto,
                                        CategoryDto categoryDto,
-                                       LocationEntity location
+                                       LocationDto location,
+                                       Long hits
     ) {
-        Boolean requestModeration = eventEntity.getRequestModeration();
 
         return EventFullDto.builder()
                 .id(eventEntity.getId())
@@ -43,12 +57,12 @@ public class EventMapper {
                 .location(location)
                 .eventDate(eventEntity.getEventDate().toString())
                 .createdOn(eventEntity.getCreatedOn().toString())
-                .publishedOn(null)
-                .state(requestModeration ? eventEntity.getState().getName() : null)
+                .publishedOn(eventEntity.getPublishedOn() != null ? eventEntity.getPublishedOn().toString() : null)
+                .state(eventEntity.getState().getName() != null ? eventEntity.getState().getName() : null)
                 .paid(eventEntity.getPaid())
                 .requestModeration(eventEntity.getRequestModeration())
                 .participantLimit(eventEntity.getParticipantLimit())
-                .views(DEFAULT_VIEWS)
+                .views(isNull(hits) ? DEFAULT_VIEWS : hits)
                 .confirmedRequests(CONFIRMED_REQUESTS)
                 .description(eventEntity.getDescription())
                 .title(eventEntity.getTitle())

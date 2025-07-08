@@ -14,7 +14,7 @@ import ru.practicum.main.service.CompilationService;
 @RestController
 @RequestMapping("/admin/compilation")
 @RequiredArgsConstructor
-public class CompilationControllerAdmin {
+public class CompilationAdminController {
     private final CompilationService compilationService;
 
     @PostMapping

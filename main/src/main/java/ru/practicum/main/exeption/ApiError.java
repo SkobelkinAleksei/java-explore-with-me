@@ -11,7 +11,6 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
 public class ApiError {
-
     List<String> errors;
     String message;
     String reason;

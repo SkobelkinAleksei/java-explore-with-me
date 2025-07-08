@@ -21,7 +21,7 @@ public class CompilationEntity {
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "compilation_event",
-            joinColumns = @JoinColumn(name = "complitation_id"),
+            joinColumns = @JoinColumn(name = "compilation_id"),
             inverseJoinColumns = @JoinColumn(name = "event_id")
     )
     private Set<EventEntity> events;

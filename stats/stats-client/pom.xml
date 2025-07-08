@@ -9,7 +9,6 @@
     </parent>
     <artifactId>stats-client</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>stats-client</name>
     <dependencies>
         <dependency>
             <groupId>ru.practicum</groupId>
@@ -30,4 +29,12 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>

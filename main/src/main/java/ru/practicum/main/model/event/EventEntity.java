@@ -1,6 +1,5 @@
 package ru.practicum.main.model.event;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.*;
 import ru.practicum.main.model.location.LocationEntity;
@@ -48,6 +47,7 @@ public class EventEntity {
     @Enumerated(EnumType.STRING)
     private State state;
 
+    @Column(name = "paid")
     private Boolean paid;
 
     @Column(name = "request_moderation")
@@ -55,7 +55,6 @@ public class EventEntity {
 
     @Column(name = "participant_limit")
     private Integer participantLimit;
-
 
     @Column(name = "confirmed_requests")
     private Integer confirmedRequests;

@@ -3,6 +3,7 @@ package ru.practicum.main.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,8 @@ import ru.practicum.main.model.category.CategoryDto;
 import ru.practicum.main.model.category.CategoryEntity;
 import ru.practicum.main.model.category.NewCategoryDto;
 import ru.practicum.main.repository.CategoriesRepository;
+import ru.practicum.main.repository.EventRepository;
+import ru.practicum.main.utils.DefaultMessagesForException;
 
 import java.util.List;
 
@@ -21,6 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CategoriesService {
     private final CategoriesRepository categoriesRepository;
+    private final EventRepository eventRepository;
 
     @Transactional(readOnly = true)
     public List<CategoryDto> getCategories(Integer from, Integer size) throws NumberFormatException {
@@ -45,20 +49,17 @@ public class CategoriesService {
 
         return CategoryMapper.toDto(
                 categoriesRepository.findById(Long.valueOf(catId))
-                .orElseThrow(
-                        () -> new EntityNotFoundException("Категория не найдена.")
-                )
+                        .orElseThrow(
+                                () -> new EntityNotFoundException("Категория не найдена.")
+                        )
         );
     }
 
     @Transactional
-    public CategoryDto createCategory(NewCategoryDto newCategoryDto) throws CategoryAlreadyExists {
+    public CategoryDto createCategory(
+            NewCategoryDto newCategoryDto
+    ) throws ConstraintViolationException {
         log.info("Создание новой категории с названием: {}", newCategoryDto.getName());
-
-        if (categoriesRepository.isCategoryExists(newCategoryDto.getName())) {
-            throw new CategoryAlreadyExists("Категория с таким названием уже добавлена.");
-        }
-
         CategoryEntity categoryEntity = categoriesRepository.save(CategoryMapper.toEntity(newCategoryDto));
         log.info("Категория успешно создана с id: {}", categoryEntity.getId());
 
@@ -66,13 +67,29 @@ public class CategoriesService {
     }
 
     @Transactional
-    public void deleteCategory(Long catId) throws EntityNotFoundException {
-        if (!categoriesRepository.existsById(catId)) {
-            throw new EntityNotFoundException("Категория не найдена");
-        }
+    public void deleteCategory(Long catId) throws NumberFormatException {
+        if (!categoriesRepository.isCategoryExistsById(catId))
+            throw new EntityNotFoundException(DefaultMessagesForException.CATEGORY_NOT_FOUND);
+
+        if (eventRepository.isEventEntityExistsById(catId))
+            throw new IllegalArgumentException(DefaultMessagesForException.CANNOT_DELETE_CATEGORY_WITH_EVENTS);
 
         log.info("Удаление категории с id: {}", catId);
         categoriesRepository.deleteById(catId);
         log.info("Категория с id: {} успешно удалена", catId);
+    }
+
+    @Transactional
+    public CategoryDto updateCategory(
+            Long catId, CategoryDto categoryDto
+    ) throws ConstraintViolationException, NumberFormatException {
+        CategoryEntity categoryEntity = categoriesRepository.findById(catId)
+                .orElseThrow(() ->
+                        new CategoryAlreadyExists("Категория не была найдена.")
+                );
+
+        categoriesRepository.updateCategoryEntity(catId, categoryDto.getName());
+
+        return CategoryMapper.toDto(categoryEntity);
     }
 }

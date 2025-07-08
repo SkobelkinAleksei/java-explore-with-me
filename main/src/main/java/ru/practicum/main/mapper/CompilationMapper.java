@@ -7,7 +7,6 @@ import ru.practicum.main.model.complitation.NewCompilationDto;
 import ru.practicum.main.model.complitation.UpdateCompilationRequest;
 import ru.practicum.main.model.event.EventEntity;
 import ru.practicum.main.model.event.EventShortDto;
-import ru.practicum.main.model.user.UserShortDto;
 
 import java.util.List;
 import java.util.Set;

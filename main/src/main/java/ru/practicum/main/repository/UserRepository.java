@@ -6,17 +6,10 @@ import org.springframework.stereotype.Repository;
 import ru.practicum.main.model.user.UserDto;
 import ru.practicum.main.model.user.UserEntity;
 
-import java.awt.print.Pageable;
 import java.util.List;
 
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
-    @Query("""
-        SELECT new ru.practicum.main.model.user.UserDto(ue.id, ue.email, ue.name)
-        FROM UserEntity as ue
-    """)
-    List<UserDto> findWithUsersPagination(Pageable pageable);
-
     @Query("""
         SELECT new ru.practicum.main.model.user.UserDto(ue.id, ue.email, ue.name)
         FROM UserEntity as ue
@@ -30,4 +23,11 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
        WHERE ue.email = :email
     """)
     boolean isUserExistsByEmail(String email);
+
+    @Query("""
+       SELECT (COUNT(ue.id) > 0)
+       FROM UserEntity as ue
+       WHERE ue.id = :userId
+    """)
+    boolean isUserExistsById(Long userId);
 }

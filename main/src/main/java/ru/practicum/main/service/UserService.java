@@ -41,8 +41,8 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<UserDto> getUsers(List<Integer> ids,
-                            Integer from,
-                            Integer size
+                                  Integer from,
+                                  Integer size
     ) throws NumberFormatException {
 
         log.info("Запрос на получение пользователей. ids: {}, from: {}, size: {}", ids, from, size);

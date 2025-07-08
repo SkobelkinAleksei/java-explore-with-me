@@ -1,6 +1,7 @@
 package ru.practicum.main.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import ru.practicum.main.model.category.CategoryEntity;
@@ -9,9 +10,17 @@ import ru.practicum.main.model.category.CategoryEntity;
 public interface CategoriesRepository extends JpaRepository<CategoryEntity, Long> {
 
     @Query("""
-        SELECT (COUNT(c.name) > 0 )
-        FROM CategoryEntity as c
-        WHERE c.name = :name
-    """)
-    boolean isCategoryExists(String name);
+                SELECT (COUNT(c.id) > 0 )
+                FROM CategoryEntity as c
+                WHERE c.id = :catId
+            """)
+    boolean isCategoryExistsById(Long catId);
+
+    @Modifying
+    @Query("""
+                UPDATE CategoryEntity as ce
+                SET ce.name = :categoryName
+                WHERE ce.id = :catId
+            """)
+    Integer updateCategoryEntity(Long catId, String categoryName);
 }
