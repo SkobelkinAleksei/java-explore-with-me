@@ -65,7 +65,7 @@ public class EventService {
         log.info("Запрос на получение событий пользователя с id: {}, from: {}, size: {}", userId, from, size);
 
         UserEntity userEntity = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Пользователь не был найден."));
+                .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND));
         log.debug("Найден пользователь: {}", userEntity);
 
         Set<EventEntity> eventEntitiesByUserId = eventRepository.findEventEntitiesByUserId(
@@ -218,22 +218,29 @@ public class EventService {
 
         List<EventEntity> filteredEvents = allEventEntities.stream()
                 .filter(event -> {
-                    if (users != null) {
+                    if (users != null && !users.isEmpty()) {
                         Long initiatorId = event.getInitiator().getId();
-                        return users.contains(initiatorId);
+                        if (!users.contains(initiatorId)) {
+                            return false;
+                        }
+                    }
+                    if (states != null && !states.isEmpty()) {
+                        String eventState = event.getState().getName();
+                        boolean stateMatches = states.stream()
+                                .anyMatch(state -> state.equalsIgnoreCase(eventState));
+                        if (!stateMatches) {
+                            return false;
+                        }
+                    }
+                    if (categories != null && !categories.isEmpty()) {
+                        Long categoryId = event.getCategory().getId();
+                        if (!categories.contains(categoryId)) {
+                            return false;
+                        }
                     }
                     return true;
-                }).filter(event -> {
-                    if (states != null) {
-                        return states.contains(event.getState().getName());
-                    }
-                    return true;
-                }).filter(event -> {
-                    if (categories != null) {
-                        return categories.contains(event.getCategory().getId());
-                    }
-                    return true;
-                }).toList();
+                })
+                .toList();
 
         return filteredEvents.stream().map(eventEntity -> {
             UserEntity userEntity = userRepository.findById(eventEntity.getInitiator().getId())
