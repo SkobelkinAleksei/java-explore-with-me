@@ -56,10 +56,10 @@ public class GlobalExceptionHandler {
                                 .toList()
                 ).message(e.getMessage())
                 .reason("Entity not found.")
-                .status(HttpStatus.NOT_FOUND.toString())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.toString())
                 .timestamp(LocalDateTime.now().toString()).build();
 
-        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
 }
