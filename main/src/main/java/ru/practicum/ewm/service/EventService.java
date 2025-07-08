@@ -264,13 +264,13 @@ public class EventService {
     ) throws ForbiddenException, NumberFormatException, ConstraintViolationException {
         log.info("Создание нового события пользователя с id: {}. Данные события: {}", userId, newEventDto);
 
-        CategoryEntity categoryEntity = categoriesRepository.findById(newEventDto.getCategory())
-                .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.CATEGORY_NOT_FOUND));
-        log.debug("Найдена категория: {}", categoryEntity);
-
         UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND));
         log.debug("Найден пользователь: {}", userEntity);
+
+        CategoryEntity categoryEntity = categoriesRepository.findById(newEventDto.getCategory())
+                .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.CATEGORY_NOT_FOUND));
+        log.debug("Найдена категория: {}", categoryEntity);
 
         LocationEntity savedLocationEntity = locationRepository.save(
                 new LocationEntity(
