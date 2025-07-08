@@ -19,7 +19,8 @@ public class GlobalExceptionHandler {
             NumberFormatException.class,
             DataIntegrityViolationException.class,
             ConstraintViolationException.class,
-            MethodArgumentNotValidException.class})
+            MethodArgumentNotValidException.class,
+            IllegalArgumentException.class})
     public ResponseEntity<ApiError> handleNumberFormatException(Exception e) {
         ApiError error = ApiError.builder()
                 .errors(

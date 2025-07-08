@@ -82,6 +82,28 @@ public interface EventRepository extends JpaRepository<EventEntity, Long> {
                           Long locationId,
                           State stateAction);
 
+    @Modifying
+    @Query("""
+        UPDATE EventEntity ee
+        SET
+            ee.annotation = :#{#updateEventAdminRequest.annotation},
+            ee.category.id = :#{#updateEventAdminRequest.category},
+            ee.description = :#{#updateEventAdminRequest.description},
+            ee.eventDate = :eventDate,
+            ee.location.id = :locationId,
+            ee.paid = :#{#updateEventAdminRequest.paid},
+            ee.participantLimit = :#{#updateEventAdminRequest.participantLimit},
+            ee.requestModeration = :#{#updateEventAdminRequest.requestModeration},
+            ee.state = :stateAction,
+            ee.title = :#{#updateEventAdminRequest.title}
+        WHERE ee.id = :eventId
+        """)
+    int updateEventEntity(@Param("eventId") Long eventId,
+                          @Param("updateEventAdminRequest") UpdateEventAdminRequest updateEventAdminRequest,
+                          LocalDateTime eventDate,
+                          Long locationId,
+                          State stateAction);
+
     @Query("""
             SELECT (COUNT(ee.id) > 0)
             FROM EventEntity as ee

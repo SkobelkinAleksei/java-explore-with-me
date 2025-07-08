@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
-import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -35,6 +34,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.zip.DataFormatException;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -61,7 +61,7 @@ public class EventService {
             Long userId,
             Integer from,
             Integer size
-    ) {
+    ) throws NumberFormatException {
         log.info("Запрос на получение событий пользователя с id: {}, from: {}, size: {}", userId, from, size);
 
         UserEntity userEntity = userRepository.findById(userId)
@@ -89,7 +89,7 @@ public class EventService {
                                                      String sort,
                                                      Integer from,
                                                      Integer size
-    ) {
+    ) throws NumberFormatException {
         String sortedBy = "";
         if (nonNull(sort)) {
             if (sort.equals(EventSortType.EVENT_DATE.toString())) sortedBy = "eventDate";
@@ -130,8 +130,13 @@ public class EventService {
                     if (rangeStart != null && rangeEnd != null) {
                         return event.getEventDate().isAfter(rangeStart)
                                && event.getEventDate().isBefore(rangeEnd);
+                    } else {
+                        try {
+                            throw new DataFormatException("Некорректная дата.");
+                        } catch (DataFormatException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
-                    return true;
                 }).map(eventEntity -> {
                     UserEntity userEntity = userRepository.findById(eventEntity.getInitiator().getId()).orElseThrow(
                             () -> new EntityNotFoundException("Такой инициатор не был найден.")
@@ -196,9 +201,13 @@ public class EventService {
             Integer from,
             Integer size,
             HttpServletRequest request
-    ) {
+    ) throws NumberFormatException {
         if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
-            throw new ValidationException("Некорректный запрос.");
+            try {
+                throw new DataFormatException("Некорректный запрос.");
+            } catch (DataFormatException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         Set<EventEntity> allEventEntities = eventRepository.findAllByAdmin(
@@ -224,17 +233,11 @@ public class EventService {
                         return categories.contains(event.getCategory().getId());
                     }
                     return true;
-                }).filter(event -> {
-                    if (rangeStart != null && rangeEnd != null) {
-                        return event.getEventDate().isAfter(rangeStart)
-                               && event.getEventDate().isBefore(rangeEnd);
-                    }
-                    return true;
                 }).toList();
 
         return filteredEvents.stream().map(eventEntity -> {
             UserEntity userEntity = userRepository.findById(eventEntity.getInitiator().getId())
-                    .orElseThrow(() -> new EntityNotFoundException("Пользователь не был найден."));
+                    .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND));
 
             List<ViewStats> viewStats = getViewStats(request, eventEntity);
 
@@ -255,11 +258,11 @@ public class EventService {
         log.info("Создание нового события пользователя с id: {}. Данные события: {}", userId, newEventDto);
 
         CategoryEntity categoryEntity = categoriesRepository.findById(newEventDto.getCategory())
-                .orElseThrow(() -> new EntityNotFoundException("Категория не была найдена."));
+                .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.CATEGORY_NOT_FOUND));
         log.debug("Найдена категория: {}", categoryEntity);
 
         UserEntity userEntity = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Пользователь не был найден."));
+                .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND));
         log.debug("Найден пользователь: {}", userEntity);
 
         LocationEntity savedLocationEntity = locationRepository.save(
@@ -285,31 +288,39 @@ public class EventService {
     public EventFullDto updateEvent(Long eventId,
                                     UpdateEventAdminRequest updateEventAdminRequest,
                                     HttpServletRequest request
-    ) {
+    ) throws NumberFormatException {
         if (isNull(eventId) || isNull(updateEventAdminRequest)) {
             throw new IllegalArgumentException("Некорректные данные.");
         }
         EventEntity eventEntity = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Такое событие не найдено."));
+                .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.EVENT_NOT_FOUND));
 
         UserEntity userEntity = userRepository.findById(eventEntity.getInitiator().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Инициатор с таким id не был найден."));
+                .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND));
+
+        if (eventRepository.isExistsByEventIdAndUserId(eventId, userEntity.getId()))
+            throw new IllegalArgumentException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
         CategoryEntity categoryEntity = categoriesRepository.findById(updateEventAdminRequest.getCategory())
-                .orElseThrow(() -> new EntityNotFoundException("Такая категория не была найдена."));
+                .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.CATEGORY_NOT_FOUND));
 
-        EventEntity updatedEventEntity = toUpdatedEventEntity(
-                eventEntity,
+        eventRepository.updateEventEntity(
+                eventId,
                 updateEventAdminRequest,
-                categoryEntity
-        );
+                LocalDateTime.parse(updateEventAdminRequest.getEventDate()),
+                locationRepository.findEntityIdByLatAndLon(
+                        updateEventAdminRequest.getLocation().getLat(),
+                        updateEventAdminRequest.getLocation().getLon()
+                ),
+                State.fromStringToState(updateEventAdminRequest.getStateAction()));
 
         List<ViewStats> viewStats = getViewStats(request, eventEntity);
 
-        return EventMapper.toEventFullDto(eventRepository.save(updatedEventEntity),
+        return EventMapper.toEventFullDto(
+                eventEntity,
                 UserMapper.toUserShortDto(userEntity),
                 CategoryMapper.toDto(categoryEntity),
-                LocationMapper.toLocationDto(updatedEventEntity.getLocation()),
+                LocationMapper.toLocationDto(eventEntity.getLocation()),
                 viewStats.isEmpty() ? 0L : viewStats.getFirst().getHits()
         );
     }
@@ -319,7 +330,7 @@ public class EventService {
                                                       Long eventId,
                                                       UpdateEventUserRequest updateEventUserRequest,
                                                       HttpServletRequest request
-    ) {
+    ) throws NumberFormatException {
         if (!userRepository.isUserExistsById(userId))
             throw new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND);
 
@@ -332,6 +343,9 @@ public class EventService {
                 .orElseThrow(() ->
                         new IllegalArgumentException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER)
                 );
+
+        if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
+            throw new IllegalArgumentException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
         if (!eventEntity.getState().equals(CANCELED) || !eventEntity.getRequestModeration())
             throw new IllegalArgumentException("Событие нельзя обновить.");
@@ -380,68 +394,5 @@ public class EventService {
                 responseStats.getBody(),
                 new TypeReference<>() {
                 });
-    }
-
-    private EventEntity toUpdatedEventEntity(
-            EventEntity currentEvent,
-            UpdateEventAdminRequest updateEventAdminRequest,
-            CategoryEntity categoryEntity
-    ) {
-        String stateAction = updateEventAdminRequest.getStateAction();
-
-        if (stateAction.equals("PUBLISH_EVENT")) {
-            currentEvent.setState(PUBLISHED);
-            currentEvent.setPublishedOn(LocalDateTime.now());
-        } else {
-            currentEvent.setState(CANCELED);
-        }
-
-        if (!currentEvent.getCategory().getId().equals(updateEventAdminRequest.getCategory())) {
-            currentEvent.setCategory(categoryEntity);
-        }
-
-        if (updateEventAdminRequest.getAnnotation() != null &&
-            !updateEventAdminRequest.getAnnotation().equals(currentEvent.getAnnotation())) {
-            currentEvent.setAnnotation(updateEventAdminRequest.getAnnotation());
-        }
-
-        if (updateEventAdminRequest.getTitle() != null &&
-            !updateEventAdminRequest.getTitle().equals(currentEvent.getTitle())) {
-            currentEvent.setTitle(updateEventAdminRequest.getTitle());
-        }
-
-        if (updateEventAdminRequest.getDescription() != null &&
-            !updateEventAdminRequest.getDescription().equals(currentEvent.getDescription())) {
-            currentEvent.setDescription(updateEventAdminRequest.getDescription());
-        }
-
-        if (updateEventAdminRequest.getEventDate() != null) {
-            LocalDateTime newDate = LocalDateTime.parse(updateEventAdminRequest.getEventDate());
-            if (!newDate.equals(currentEvent.getEventDate())) {
-                currentEvent.setEventDate(newDate);
-            }
-        }
-
-        if (updateEventAdminRequest.getLocation() != null &&
-            !updateEventAdminRequest.getLocation().equals(currentEvent.getLocation())) {
-            currentEvent.setLocation(eventServiceHelper.checkLocation(updateEventAdminRequest.getLocation()));
-        }
-
-        if (updateEventAdminRequest.getParticipantLimit() != null &&
-            !updateEventAdminRequest.getParticipantLimit().equals(currentEvent.getParticipantLimit())) {
-            currentEvent.setParticipantLimit(updateEventAdminRequest.getParticipantLimit());
-        }
-
-        if (updateEventAdminRequest.getPaid() != null &&
-            !updateEventAdminRequest.getPaid().equals(currentEvent.getPaid())) {
-            currentEvent.setPaid(updateEventAdminRequest.getPaid());
-        }
-
-        if (updateEventAdminRequest.getRequestModeration() != null &&
-            !currentEvent.getRequestModeration().equals(updateEventAdminRequest.getRequestModeration())) {
-            currentEvent.setRequestModeration(updateEventAdminRequest.getRequestModeration());
-        }
-
-        return currentEvent;
     }
 }

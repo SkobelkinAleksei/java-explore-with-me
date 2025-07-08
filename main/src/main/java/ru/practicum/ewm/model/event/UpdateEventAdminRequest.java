@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import ru.practicum.ewm.model.location.LocationEntity;
+import ru.practicum.ewm.model.location.LocationDto;
 
 @Data
 @AllArgsConstructor
@@ -26,7 +26,7 @@ public class UpdateEventAdminRequest {
 
     private String eventDate;
 
-    private LocationEntity location;
+    private LocationDto location;
 
     private Integer participantLimit;
 
