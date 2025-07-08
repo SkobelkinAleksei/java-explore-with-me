@@ -109,46 +109,53 @@ public class ParticipationRequestService {
             Long eventId,
             EventRequestStatusUpdateRequest eventRequestStatusUpdateRequest
     ) {
+        // Проверка существования пользователя
         if (!userRepository.isUserExistsById(userId))
             throw new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND);
 
+        // Получение события
         EventEntity eventEntity = eventRepository.findById(eventId).orElseThrow(() ->
                 new EntityNotFoundException(DefaultMessagesForException.EVENT_NOT_FOUND));
 
+        // Проверка, связана ли пользователь с событием
         if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
             throw new IllegalArgumentException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
+        // Получение текущего количества подтвержденных заявок
         Long countOfConfirmedRequests = requestRepository.findCountOfConfirmedRequests(
                 eventEntity.getId(),
                 State.CONFIRMED
         );
 
-        if (eventEntity.getParticipantLimit() > 0 && eventEntity.getParticipantLimit() <= countOfConfirmedRequests)
-            throw new IllegalArgumentException(DefaultMessagesForException.EVENT_LIMIT_REACHED);
-
+        // Получение всех заявок в статусе PENDING по переданным requestIds
+        List<ParticipationRequestEntity> allPendingRequests = requestRepository.findAllPendingRequestsConfirmed(
+                eventRequestStatusUpdateRequest.getRequestIds(),
+                eventId,
+                State.PENDING
+        );
 
         List<ParticipationRequestDto> confirmedRequests = new ArrayList<>();
         List<ParticipationRequestDto> rejectedRequests = new ArrayList<>();
 
-        List<ParticipationRequestEntity> allParticipationRequestsByPendingStatus =
-                requestRepository.findAllPendingRequestsConfirmed(
-                        eventRequestStatusUpdateRequest.getRequestIds(),
-                        eventId,
-                        State.PENDING
-                );
-
-        for (int i = 0; i < allParticipationRequestsByPendingStatus.size(); i++) {
-            ParticipationRequestEntity participationRequestEntity = allParticipationRequestsByPendingStatus.get(i);
+        for (ParticipationRequestEntity request : allPendingRequests) {
             if (eventRequestStatusUpdateRequest.getStatus().equals(State.REJECTED.getName())) {
-                participationRequestEntity.setStatus(State.REJECTED);
-                rejectedRequests.add(ParticipationRequestMapper.toParticipationDto(participationRequestEntity));
-            }
-
-            if (eventRequestStatusUpdateRequest.getStatus().equals(State.CONFIRMED.getName())
-                && (countOfConfirmedRequests + i) < eventEntity.getParticipantLimit()
-            ) {
-                participationRequestEntity.setStatus(State.CONFIRMED);
-                confirmedRequests.add(ParticipationRequestMapper.toParticipationDto(participationRequestEntity));
+                // Отклоняем заявку
+                request.setStatus(State.REJECTED);
+                requestRepository.save(request);
+                rejectedRequests.add(ParticipationRequestMapper.toParticipationDto(request));
+            } else if (eventRequestStatusUpdateRequest.getStatus().equals(State.CONFIRMED.getName())) {
+                // Перед подтверждением проверяем лимит участников
+                Long currentConfirmedCount = requestRepository.findCountOfConfirmedRequests(eventEntity.getId(), State.CONFIRMED);
+                if (currentConfirmedCount < eventEntity.getParticipantLimit()) {
+                    // Подтверждаем заявку
+                    request.setStatus(State.CONFIRMED);
+                    requestRepository.save(request);
+                    confirmedRequests.add(ParticipationRequestMapper.toParticipationDto(request));
+                } else {
+                     request.setStatus(State.REJECTED);
+                     requestRepository.save(request);
+                     rejectedRequests.add(ParticipationRequestMapper.toParticipationDto(request));
+                }
             }
         }
 
