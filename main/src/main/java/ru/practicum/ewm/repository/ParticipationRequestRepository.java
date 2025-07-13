@@ -9,6 +9,7 @@ import ru.practicum.ewm.model.participation.ParticipationRequestDto;
 import ru.practicum.ewm.model.participation.ParticipationRequestEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ParticipationRequestRepository extends JpaRepository<ParticipationRequestEntity, Long> {
@@ -20,6 +21,14 @@ public interface ParticipationRequestRepository extends JpaRepository<Participat
             AND pre.event.id = :eventId
             """)
     boolean isExistsByRequesterAndEventId(Long requesterId, Long eventId);
+
+    @Query("""
+            SELECT pre
+            FROM ParticipationRequestEntity as pre
+            WHERE pre.requester.id = :requesterId
+            AND pre.event.id = :eventId
+            """)
+    Optional<ParticipationRequestEntity> isExists(Long requesterId, Long eventId);
 
     @Query("""
             SELECT pre
@@ -36,7 +45,7 @@ public interface ParticipationRequestRepository extends JpaRepository<Participat
                      pre.event_id,
                      pre.requester_id,
                      pre.status::text
-                    FROM participation_request as pre
+                    FROM participation_request pre
                     WHERE pre.requester_id = ?
                     AND pre.event_id = ?
                     """,
@@ -59,9 +68,16 @@ public interface ParticipationRequestRepository extends JpaRepository<Participat
             SELECT COUNT(pre.id)
             FROM ParticipationRequestEntity as pre
             WHERE pre.event.id = :eventId
+            """)
+    Long findCountOfRequests(Long eventId);
+
+    @Query("""
+            SELECT COUNT(pre.id)
+            FROM ParticipationRequestEntity as pre
+            WHERE pre.event.id = :eventId
             AND pre.status = :status
             """)
-    Long findCountOfConfirmedRequests(Long eventId, State status);
+    Integer findCountOfConfirmedRequests(Long eventId, State status);
 
     @Query("""
             SELECT (COUNT(pre.id) > 0)
@@ -70,4 +86,12 @@ public interface ParticipationRequestRepository extends JpaRepository<Participat
             AND pre.requester.id = :userId
             """)
     boolean isParticipationRequestExistsByUserIdAndRequestId(Long userId, Long requestId);
+
+    @Query("""
+            SELECT (COUNT(pre.event.id))
+            FROM ParticipationRequestEntity as pre
+            WHERE pre.event.id = :eventId
+                         AND pre.status = :state
+            """)
+    Integer findByEventId(Long eventId, State state);
 }

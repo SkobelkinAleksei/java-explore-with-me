@@ -32,7 +32,7 @@ public class StatsService {
                                      LocalDateTime end,
                                      List<String> uris,
                                      Boolean unique) {
-        log.info("Вызываем метод findStats с параметрами %t %t %d %b", start, end, uris, unique);
+        log.info("Вызываем метод findStats с параметрами {}, {}, {}, {}", start, end, uris, unique);
 
         if (isDataCorrect(start, end)) throw new DateTimeException("Неверный формат даты");
 

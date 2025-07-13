@@ -24,7 +24,7 @@ public class UserAdminController {
     @PostMapping
     public ResponseEntity<UserDto> saveUser(@RequestBody @Valid NewUserRequest newUser) {
         log.info("Получен запрос на создание нового пользователя с email: {}", newUser.getEmail());
-        return ResponseEntity.ok().body(userService.saveUser(newUser));
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.saveUser(newUser));
     }
 
     @GetMapping

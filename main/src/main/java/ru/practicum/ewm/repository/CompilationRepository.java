@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import ru.practicum.ewm.model.complitation.CompilationEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CompilationRepository extends JpaRepository<CompilationEntity, Long> {
@@ -26,4 +27,12 @@ public interface CompilationRepository extends JpaRepository<CompilationEntity, 
             FROM CompilationEntity as ce
             """)
     List<CompilationEntity> findAllWithPagination(PageRequest pageRequest);
+
+    @EntityGraph(attributePaths = {"events"})
+    @Query("""
+            SELECT ce
+            FROM CompilationEntity as ce
+            WHERE ce.id = :compId
+            """)
+    Optional<CompilationEntity> findByIdCompilation(Long compId);
 }

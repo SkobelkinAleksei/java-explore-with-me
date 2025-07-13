@@ -1,6 +1,8 @@
 package ru.practicum.ewm.model.event;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 import ru.practicum.ewm.model.location.LocationEntity;
 import ru.practicum.ewm.model.user.UserEntity;
@@ -12,6 +14,7 @@ import java.time.LocalDateTime;
 @Table(name = "event")
 @Getter
 @Setter
+@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -32,16 +35,16 @@ public class EventEntity {
     @JoinColumn(name = "location_id", nullable = false)
     private LocationEntity location;
 
-    @Column(name = "event_date",
-            columnDefinition = "TIMESTAMP")
+    @Column(name = "event_date")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime eventDate;
 
-    @Column(name = "created_on",
-            columnDefinition = "TIMESTAMP")
+    @Column(name = "created_on")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdOn;
 
-    @Column(name = "published_on",
-            columnDefinition = "TIMESTAMP")
+    @Column(name = "published_on")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime publishedOn;
 
     @Enumerated(EnumType.STRING)
@@ -53,8 +56,9 @@ public class EventEntity {
     @Column(name = "request_moderation")
     private Boolean requestModeration;
 
+    @PositiveOrZero
     @Column(name = "participant_limit")
-    private Integer participantLimit;
+    private Long participantLimit;
 
     @Column(name = "confirmed_requests")
     private Integer confirmedRequests;

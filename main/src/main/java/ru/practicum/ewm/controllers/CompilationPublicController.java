@@ -1,5 +1,6 @@
 package ru.practicum.ewm.controllers;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/compilation")
+@RequestMapping("/compilations")
 @RequiredArgsConstructor
 public class CompilationPublicController {
     private final CompilationService compilationService;
@@ -22,13 +23,14 @@ public class CompilationPublicController {
     public ResponseEntity<List<CompilationDto>> getCompilations(
             @RequestParam(required = false) Boolean pinned,
             @RequestParam(defaultValue = "0", required = false) @PositiveOrZero Integer from,
-            @RequestParam(defaultValue = "10", required = false) @Positive Integer size
+            @RequestParam(defaultValue = "10", required = false) @Positive Integer size,
+            HttpServletRequest request
     ) {
-        return ResponseEntity.ok().body(compilationService.findAll(pinned, from, size));
+        return ResponseEntity.ok().body(compilationService.findAll(pinned, from, size, request));
     }
 
     @GetMapping("/{compId}")
-    public ResponseEntity<CompilationDto> getCompilation(@PathVariable Long compId) {
-        return ResponseEntity.ok().body(compilationService.getCompilationById(compId));
+    public ResponseEntity<CompilationDto> getCompilation(@PathVariable Long compId, HttpServletRequest request) {
+        return ResponseEntity.ok().body(compilationService.getCompilationById(compId, request));
     }
 }

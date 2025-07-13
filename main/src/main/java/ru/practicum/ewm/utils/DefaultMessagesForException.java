@@ -16,4 +16,5 @@ public class DefaultMessagesForException {
     public static final String CATEGORY_NOT_FOUND = "Категория не была найдена.";
     public static final String CANNOT_DELETE_CATEGORY_WITH_EVENTS = "Невозможно удалить категорию со связанными событиями.";
     public static final String COMPILATION_IS_NULL = "Подборка не может быть null.";
+    public static final String CATEGORY_ALREADY_EXISTS = "Категория уже существует.";
 }

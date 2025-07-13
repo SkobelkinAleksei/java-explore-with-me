@@ -2,6 +2,7 @@ package ru.practicum.ewm.mapper;
 
 import lombok.experimental.UtilityClass;
 import ru.practicum.ewm.model.event.EventEntity;
+import ru.practicum.ewm.model.event.State;
 import ru.practicum.ewm.model.participation.ParticipationRequestDto;
 import ru.practicum.ewm.model.participation.ParticipationRequestEntity;
 import ru.practicum.ewm.model.user.UserEntity;
@@ -10,12 +11,15 @@ import java.time.LocalDateTime;
 
 @UtilityClass
 public class ParticipationRequestMapper {
-    public ParticipationRequestEntity toParticipationEntity(EventEntity event,
-                                                            UserEntity requester) {
+    public ParticipationRequestEntity toParticipationEntity(
+            EventEntity event,
+            UserEntity requester
+    ) {
         return ParticipationRequestEntity.builder()
-                .created(LocalDateTime.now())
                 .event(event)
                 .requester(requester)
+                .created(LocalDateTime.now())
+                .status(State.PENDING)
                 .build();
     }
 
@@ -25,7 +29,7 @@ public class ParticipationRequestMapper {
                 .created(participationRequestEntity.getCreated().toString())
                 .event(participationRequestEntity.getEvent().getId())
                 .requester(participationRequestEntity.getRequester().getId())
-                .status(participationRequestEntity.getStatus().toString())
+                .status(participationRequestEntity.getStatus().getName())
                 .build();
     }
 }

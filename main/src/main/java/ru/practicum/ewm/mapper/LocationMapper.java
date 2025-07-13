@@ -9,6 +9,7 @@ public class LocationMapper {
 
     public LocationDto toLocationDto(LocationEntity locationEntity) {
         return LocationDto.builder()
+                .id(locationEntity.getId())
                 .lat(locationEntity.getLat())
                 .lon(locationEntity.getLon())
                 .build();

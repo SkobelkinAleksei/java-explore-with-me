@@ -18,4 +18,6 @@ public class EventShortDto {
     private UserShortDto initiator;
     private Boolean paid;
     private String title;
+    private Integer confirmedRequests;
+    private Long views;
 }

@@ -1,5 +1,6 @@
 package ru.practicum.ewm.controllers;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -12,15 +13,15 @@ import ru.practicum.ewm.service.CompilationService;
 
 @Slf4j
 @RestController
-@RequestMapping("/admin/compilation")
+@RequestMapping("/admin/compilations")
 @RequiredArgsConstructor
 public class CompilationAdminController {
     private final CompilationService compilationService;
 
     @PostMapping
-    public ResponseEntity<CompilationDto> saveCompilation(NewCompilationDto compilationDto) {
+    public ResponseEntity<CompilationDto> saveCompilation(@RequestBody @Valid NewCompilationDto compilationDto) {
         log.info("Поступил запрос на создание новой подборки");
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.CREATED).body(
                 compilationService.saveCompilation(compilationDto)
         );
     }
@@ -32,9 +33,9 @@ public class CompilationAdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{compId}")
+    @PatchMapping("/{compId}")
     public ResponseEntity<CompilationDto> updateCompilation(@PathVariable Long compId,
-                                                            @RequestBody UpdateCompilationRequest updateCompilation) {
+                                                            @RequestBody @Valid UpdateCompilationRequest updateCompilation) {
         log.info("Поступил запрос на обновление подборки с id: {}", compId);
         return ResponseEntity.ok().body(compilationService.updateCompilation(compId, updateCompilation));
     }

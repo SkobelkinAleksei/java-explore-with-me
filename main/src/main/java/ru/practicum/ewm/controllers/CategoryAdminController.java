@@ -20,7 +20,7 @@ public class CategoryAdminController {
     @PostMapping
     public ResponseEntity<CategoryDto> createdCategory(@RequestBody @Valid NewCategoryDto categoryDto) {
         log.info("Поступил запрос на создание новой категории с названием: {}", categoryDto.getName());
-        return ResponseEntity.ok().body(categoriesService.createCategory(categoryDto));
+        return ResponseEntity.status(HttpStatus.CREATED).body(categoriesService.createCategory(categoryDto));
     }
 
     @DeleteMapping("/{catId}")
@@ -34,7 +34,7 @@ public class CategoryAdminController {
     @PatchMapping("/{catId}")
     public ResponseEntity<CategoryDto> updatedCategory(
             @PathVariable Long catId,
-            @RequestBody CategoryDto categoryDto
+            @RequestBody @Valid CategoryDto categoryDto
     ) {
         return ResponseEntity.ok().body(categoriesService.updateCategory(catId, categoryDto));
     }

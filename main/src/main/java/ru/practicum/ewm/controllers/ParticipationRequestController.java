@@ -2,6 +2,7 @@ package ru.practicum.ewm.controllers;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.model.participation.ParticipationRequestDto;
@@ -20,11 +21,13 @@ public class ParticipationRequestController {
     public ResponseEntity<ParticipationRequestDto> createRequest(@PathVariable Long userId,
                                                                  @RequestParam Long eventId
     ) {
-        return ResponseEntity.ok().body(participationRequestService.createRequest(userId, eventId));
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                participationRequestService.createRequest(userId, eventId)
+        );
     }
 
     @GetMapping
-    public ResponseEntity<List<ParticipationRequestDto>> getRequests(@PathVariable Long userId) {
+    public ResponseEntity<List<ParticipationRequestDto>> getUserRequests(@PathVariable Long userId) {
         return ResponseEntity.ok().body(participationRequestService.getUserRequests(userId));
     }
 

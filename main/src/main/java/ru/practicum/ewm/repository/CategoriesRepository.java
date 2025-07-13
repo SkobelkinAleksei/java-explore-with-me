@@ -16,6 +16,13 @@ public interface CategoriesRepository extends JpaRepository<CategoryEntity, Long
             """)
     boolean isCategoryExistsById(Long catId);
 
+    @Query("""
+                SELECT (COUNT(c.id) > 0 )
+                FROM CategoryEntity as c
+                WHERE c.name = :catName
+            """)
+    boolean isCategoryExistsByName(String catName);
+
     @Modifying
     @Query("""
                 UPDATE CategoryEntity as ce

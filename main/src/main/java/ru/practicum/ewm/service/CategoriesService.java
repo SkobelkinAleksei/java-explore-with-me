@@ -9,6 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.exeption.CategoryAlreadyExists;
+import ru.practicum.ewm.exeption.ForbiddenException;
 import ru.practicum.ewm.mapper.CategoryMapper;
 import ru.practicum.ewm.model.category.CategoryDto;
 import ru.practicum.ewm.model.category.CategoryEntity;
@@ -60,6 +61,9 @@ public class CategoriesService {
             NewCategoryDto newCategoryDto
     ) throws ConstraintViolationException {
         log.info("Создание новой категории с названием: {}", newCategoryDto.getName());
+        if (categoriesRepository.isCategoryExistsByName(newCategoryDto.getName())) {
+            throw new ForbiddenException(DefaultMessagesForException.CATEGORY_ALREADY_EXISTS);
+        }
         CategoryEntity categoryEntity = categoriesRepository.save(CategoryMapper.toEntity(newCategoryDto));
         log.info("Категория успешно создана с id: {}", categoryEntity.getId());
 
@@ -71,8 +75,8 @@ public class CategoriesService {
         if (!categoriesRepository.isCategoryExistsById(catId))
             throw new EntityNotFoundException(DefaultMessagesForException.CATEGORY_NOT_FOUND);
 
-        if (eventRepository.isEventEntityExistsById(catId))
-            throw new IllegalArgumentException(DefaultMessagesForException.CANNOT_DELETE_CATEGORY_WITH_EVENTS);
+        if (eventRepository.isCategoryEntityExistsEvents(catId))
+            throw new ForbiddenException(DefaultMessagesForException.CANNOT_DELETE_CATEGORY_WITH_EVENTS);
 
         log.info("Удаление категории с id: {}", catId);
         categoriesRepository.deleteById(catId);
@@ -81,15 +85,18 @@ public class CategoriesService {
 
     @Transactional
     public CategoryDto updateCategory(
-            Long catId, CategoryDto categoryDto
+            Long catId,
+            CategoryDto categoryDto
     ) throws ConstraintViolationException, NumberFormatException {
         CategoryEntity categoryEntity = categoriesRepository.findById(catId)
                 .orElseThrow(() ->
                         new CategoryAlreadyExists("Категория не была найдена.")
                 );
 
-        categoriesRepository.updateCategoryEntity(catId, categoryDto.getName());
-
-        return CategoryMapper.toDto(categoryEntity);
+        if (categoriesRepository.isCategoryExistsByName(categoryDto.getName()) && !categoryEntity.getName().equals(categoryDto.getName())) {
+            throw new ForbiddenException("Категория с таким названием уже существует.");
+        }
+        categoryEntity.setName(categoryDto.getName());
+        return CategoryMapper.toDto(categoriesRepository.save(categoryEntity));
     }
 }

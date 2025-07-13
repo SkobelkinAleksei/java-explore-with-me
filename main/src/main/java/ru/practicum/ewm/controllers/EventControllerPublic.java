@@ -27,29 +27,34 @@ public class EventControllerPublic {
             @RequestParam(required = false) String text,
             @RequestParam(required = false) List<Long> categories,
             @RequestParam(required = false) Boolean paid,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss") LocalDateTime rangeStart,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss") LocalDateTime rangeEnd,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeStart,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeEnd,
             @RequestParam(required = false) Boolean onlyAvailable,
             @RequestParam(required = false) String sort,
             @RequestParam(required = false, defaultValue = "0") @PositiveOrZero Integer from,
-            @RequestParam(required = false, defaultValue = "10") @Positive Integer size
+            @RequestParam(required = false, defaultValue = "10") @Positive Integer size,
+            HttpServletRequest request
     ) {
-        return ResponseEntity.ok().body(eventService.getEventsByPublicUser(
-                text,
-                categories,
-                paid,
-                rangeStart,
-                rangeEnd,
-                onlyAvailable,
-                sort,
-                from,
-                size)
+        return ResponseEntity.ok().body(
+                eventService.getEventsByPublicUser(
+                        text,
+                        categories,
+                        paid,
+                        rangeStart,
+                        rangeEnd,
+                        onlyAvailable,
+                        sort,
+                        from,
+                        size,
+                        request
+                )
         );
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<EventFullDto> getEvent(@PathVariable Long id,
                                                  HttpServletRequest request) {
-        return null;
+        log.info("ID------------------------: {}", id);
+        return ResponseEntity.ok().body(eventService.getEventByIdWithoutUser(id, request));
     }
 }

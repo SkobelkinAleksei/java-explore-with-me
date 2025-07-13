@@ -11,6 +11,8 @@ import ru.practicum.ewm.model.event.EventShortDto;
 import java.util.List;
 import java.util.Set;
 
+import static java.util.Objects.isNull;
+
 @UtilityClass
 public class CompilationMapper {
     public CompilationEntity toEntity(NewCompilationDto compilationDto) {
@@ -31,24 +33,20 @@ public class CompilationMapper {
                 .build();
     }
 
-    public CompilationEntity toUpdateEntity(UpdateCompilationRequest compilationRequest,
-                                            CompilationEntity currentEntity,
-                                            Set<EventEntity> updatedEntitySet
+    public CompilationEntity toUpdateEntity(
+            UpdateCompilationRequest updateCompilationRequest,
+            CompilationEntity currentEntity,
+            Set<EventEntity> eventEntities
     ) {
         return CompilationEntity.builder()
-                .events(updatedEntitySet != null
-                        && !updatedEntitySet.isEmpty()
-                        ? updatedEntitySet
-                        : currentEntity.getEvents()
-                )
-                .pinned(compilationRequest.getPinned() != null
-                        ? compilationRequest.getPinned()
-                        : currentEntity.getPinned()
-                )
-                .title(compilationRequest.getTitle() != null
-                        ? compilationRequest.getTitle()
-                        : currentEntity.getTitle()
-                )
+                .events(isNull(updateCompilationRequest.getEventsId())
+                        ? currentEntity.getEvents()
+                        : eventEntities)
+                .pinned(!isNull(updateCompilationRequest.getPinned())
+                        && updateCompilationRequest.getPinned())
+                .title(isNull(updateCompilationRequest.getTitle())
+                        ? currentEntity.getTitle()
+                        : updateCompilationRequest.getTitle())
                 .build();
     }
 }

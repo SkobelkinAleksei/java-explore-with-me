@@ -1,6 +1,7 @@
 package ru.practicum.ewm.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
@@ -27,27 +28,28 @@ public class EventControllerAdmin {
             @RequestParam(required = false) List<Long> users,
             @RequestParam(required = false) List<String> states,
             @RequestParam(required = false) List<Long> categories,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss") LocalDateTime rangeStart,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss") LocalDateTime rangeEnd,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeStart,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeEnd,
             @RequestParam(required = false, defaultValue = "0") @PositiveOrZero Integer from,
             @RequestParam(required = false, defaultValue = "10") @Positive Integer size,
             HttpServletRequest request
     ) {
-        return ResponseEntity.ok().body(eventService.getEventsByAdmin(
-                users,
-                states,
-                categories,
-                rangeStart,
-                rangeEnd,
-                from,
-                size,
-                request)
+        return ResponseEntity.ok().body(
+                eventService.getEventsByAdmin(
+                        users,
+                        states,
+                        categories,
+                        rangeStart,
+                        rangeEnd,
+                        from,
+                        size,
+                        request)
         );
     }
 
     @PatchMapping("/{eventId}")
     public ResponseEntity<EventFullDto> updateEvent(@PathVariable Long eventId,
-                                                    @RequestBody UpdateEventAdminRequest updateEventAdminRequest,
+                                                    @RequestBody @Valid UpdateEventAdminRequest updateEventAdminRequest,
                                                     HttpServletRequest request
     ) {
         return ResponseEntity.ok().body(eventService.updateEvent(eventId, updateEventAdminRequest, request));

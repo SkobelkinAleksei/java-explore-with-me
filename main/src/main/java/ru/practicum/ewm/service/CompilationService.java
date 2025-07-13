@@ -1,6 +1,7 @@
 package ru.practicum.ewm.service;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
@@ -20,9 +21,12 @@ import ru.practicum.ewm.model.user.UserEntity;
 import ru.practicum.ewm.model.user.UserShortDto;
 import ru.practicum.ewm.repository.CompilationRepository;
 import ru.practicum.ewm.repository.EventRepository;
+import ru.practicum.ewm.repository.ParticipationRequestRepository;
 import ru.practicum.ewm.repository.UserRepository;
 import ru.practicum.ewm.utils.DefaultMessagesForException;
 import ru.practicum.ewm.utils.EventServiceHelper;
+import ru.practicum.statsclient.StatsClient;
+import ru.practicum.statsdto.ViewStats;
 
 import java.util.Collections;
 import java.util.List;
@@ -30,6 +34,7 @@ import java.util.Set;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static ru.practicum.ewm.model.event.State.CONFIRMED;
 
 @Slf4j
 @Service
@@ -37,12 +42,14 @@ import static java.util.Objects.nonNull;
 public class CompilationService {
     private final CompilationRepository compilationRepository;
     private final EventRepository eventRepository;
+    private final ParticipationRequestRepository participationRequestRepository;
     private final UserRepository userRepository;
 
     private final EventServiceHelper eventServiceHelper;
+    private final StatsClient statsClient;
 
     @Transactional(readOnly = true)
-    public CompilationDto getCompilationById(Long compId) throws NumberFormatException {
+    public CompilationDto getCompilationById(Long compId, HttpServletRequest request) throws NumberFormatException {
 
         CompilationEntity compilationEntity = compilationRepository.findById(compId)
                 .orElseThrow(() ->
@@ -50,11 +57,21 @@ public class CompilationService {
                 );
 
         List<EventShortDto> eventShortDtos = compilationEntity.getEvents().stream()
-                .map(eventEntity ->
-                        EventMapper.toShortEventDto(
-                                eventEntity, UserMapper.toUserShortDto(eventEntity.getInitiator())
-                        ))
-                .toList();
+                .map(eventEntity -> {
+                    Integer countOfConfirmedRequests =
+                            participationRequestRepository.findCountOfConfirmedRequests(eventEntity.getId(), CONFIRMED);
+                    List<ViewStats> viewStats = eventServiceHelper.getViewStats(request, eventEntity);
+                    Long hits = 0L;
+                    if (nonNull(viewStats)) {
+                        if (!viewStats.isEmpty()) hits = viewStats.getFirst().getHits();
+                    }
+                    eventEntity.setConfirmedRequests(countOfConfirmedRequests);
+                    return EventMapper.toShortEventDto(eventEntity,
+                            UserMapper.toUserShortDto(eventEntity.getInitiator()),
+                            hits,
+                            countOfConfirmedRequests
+                    );
+                }).toList();
 
         return CompilationMapper.toDto(compilationEntity, eventShortDtos);
     }
@@ -93,38 +110,54 @@ public class CompilationService {
     }
 
     @Transactional
-    public CompilationDto updateCompilation(Long id, UpdateCompilationRequest compilationRequest) {
+    public CompilationDto updateCompilation(
+            Long id,
+            UpdateCompilationRequest compilationRequest
+    ) {
         log.info("Обновление подборки с id: {}. Данные обновления: {}", id, compilationRequest);
 
-        CompilationEntity compilationEntity = compilationRepository.findById(id).orElseThrow(
+        CompilationEntity compilationEntity = compilationRepository.findByIdCompilation(id).orElseThrow(
                 () -> new EntityNotFoundException("Подборка не была найдена.")
         );
         log.debug("Найдена подборка: {}", compilationEntity);
+        Set<EventEntity> events = compilationEntity.getEvents();
 
-        Set<EventEntity> eventEntitiesByIds = eventRepository.findEventEntitiesByIds(compilationRequest.getEventsId());
-        log.debug("Обновление событий подборки. Найдено {} событий", eventEntitiesByIds.size());
+        if (nonNull(compilationRequest.getEventsId())) {
+            Set<EventEntity> eventEntitiesByIds = eventRepository.findEventEntitiesByIds(compilationRequest.getEventsId());
+            events.addAll(eventEntitiesByIds);
+            compilationEntity.setEvents(events);
+        }
+
+        if (nonNull(compilationRequest.getPinned())) {
+            compilationEntity.setPinned(compilationRequest.getPinned());
+        }
+
+        if (nonNull(compilationRequest.getTitle())) {
+            compilationEntity.setTitle(compilationRequest.getTitle());
+        }
 
         CompilationEntity updatedCompilation = compilationRepository.save(
-                CompilationMapper.toUpdateEntity(compilationRequest, compilationEntity, eventEntitiesByIds)
+                compilationEntity
         );
+
         log.info("Подборка с id: {} обновлена", updatedCompilation.getId());
 
-        List<EventShortDto> eventShortDtos = getEventShortDtos(eventEntitiesByIds);
+        List<EventShortDto> eventShortDtos = getEventShortDtos(updatedCompilation.getEvents());
         log.debug("Создан список EventShortDtos для обновленной подборки");
 
         return CompilationMapper.toDto(updatedCompilation, eventShortDtos);
     }
 
     @Transactional(readOnly = true)
-    public List<CompilationDto> findAll(Boolean pinned, Integer from, Integer size) {
+    public List<CompilationDto> findAll(Boolean pinned, Integer from, Integer size, HttpServletRequest request) {
         PageRequest pageRequest = eventServiceHelper.getPageRequest(from, size);
         if (nonNull(pinned)) {
             List<CompilationEntity> allPinned = compilationRepository.findAllPinned(true, pageRequest);
-            return getCompilationDtos(allPinned);
+            return getCompilationDtos(allPinned, request);
         }
 
         List<CompilationEntity> allCompilationEntities = compilationRepository.findAllWithPagination(pageRequest);
-        return getCompilationDtos(allCompilationEntities);
+        return getCompilationDtos(allCompilationEntities, request);
     }
 
     private List<EventShortDto> getEventShortDtos(Set<EventEntity> eventEntitiesByIds) {
@@ -143,15 +176,23 @@ public class CompilationService {
                 .toList();
     }
 
-    private List<CompilationDto> getCompilationDtos(List<CompilationEntity> allCompilationEntities) {
+    private List<CompilationDto> getCompilationDtos(List<CompilationEntity> allCompilationEntities, HttpServletRequest request) {
         return allCompilationEntities.isEmpty()
                 ? Collections.emptyList()
                 : allCompilationEntities.stream()
                 .map(compilationEntity -> {
                     List<EventShortDto> eventShortDtos = compilationEntity.getEvents().stream()
                             .map(eventEntity -> {
+                                Integer countOfConfirmedRequests =
+                                        participationRequestRepository.findCountOfConfirmedRequests(eventEntity.getId(), CONFIRMED);
+                                List<ViewStats> viewStats = eventServiceHelper.getViewStats(request, eventEntity);
+                                Long hits = 0L;
+                                if (nonNull(viewStats)) {
+                                    if (!viewStats.isEmpty()) hits = viewStats.getFirst().getHits();
+                                }
+                                eventEntity.setConfirmedRequests(countOfConfirmedRequests);
                                 UserShortDto userShortDto = UserMapper.toUserShortDto(eventEntity.getInitiator());
-                                return EventMapper.toShortEventDto(eventEntity, userShortDto);
+                                return EventMapper.toShortEventDto(eventEntity, userShortDto, hits, countOfConfirmedRequests);
                             }).toList();
                     return CompilationMapper.toDto(compilationEntity, eventShortDtos);
                 })

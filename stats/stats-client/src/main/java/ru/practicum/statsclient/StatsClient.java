@@ -42,12 +42,12 @@ public class StatsClient {
                                            Boolean unique) {
         StringBuilder urlResult = new StringBuilder(url.concat("/stats?"));
 
-        urlResult.append("start=").append(start.format(formatter));
-        urlResult.append("&end=").append(end.format(formatter)).append("&");
         for (String str : uris) {
             urlResult.append("uris=").append(str).append("&");
         }
-        urlResult.append("&unique=").append(unique);
+        urlResult.append("start=").append(start.format(formatter));
+        urlResult.append("&end=").append(end.format(formatter)).append("&");
+        urlResult.append("unique=").append(unique);
 
         try {
             ResponseEntity<Object> response = restTemplate.getForEntity(urlResult.toString(), Object.class);

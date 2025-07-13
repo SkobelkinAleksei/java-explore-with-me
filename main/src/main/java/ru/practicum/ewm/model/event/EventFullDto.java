@@ -1,5 +1,6 @@
 package ru.practicum.ewm.model.event;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,6 +29,7 @@ public class EventFullDto {
 
     private LocationDto location;
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private String eventDate;
 
     private String createdOn;
@@ -40,7 +42,7 @@ public class EventFullDto {
 
     private Boolean requestModeration;
 
-    private Integer participantLimit;
+    private Long participantLimit;
 
     private Long views;
 

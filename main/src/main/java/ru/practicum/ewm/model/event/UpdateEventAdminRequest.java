@@ -16,7 +16,7 @@ public class UpdateEventAdminRequest {
     @Size(min = 20, max = 2000, message = "Длина должна быть не менее 20 и не более 2000 символов.")
     private String annotation;
 
-    @Size(min = 3, max = 130, message = "Длина должна быть не менее 3 и не более 130 символов.")
+    @Size(min = 3, max = 120, message = "Длина должна быть не менее 3 и не более 120 символов.")
     private String title;
 
     @Size(min = 20, max = 7000, message = "Длина должна быть не менее 20 и не более 7000 символов.")

@@ -3,27 +3,25 @@ package ru.practicum.ewm.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.criteria.Predicate;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.exeption.ForbiddenException;
-import ru.practicum.ewm.mapper.CategoryMapper;
 import ru.practicum.ewm.mapper.EventMapper;
-import ru.practicum.ewm.mapper.LocationMapper;
 import ru.practicum.ewm.mapper.UserMapper;
 import ru.practicum.ewm.model.category.CategoryEntity;
 import ru.practicum.ewm.model.event.*;
 import ru.practicum.ewm.model.location.LocationEntity;
 import ru.practicum.ewm.model.user.UserEntity;
-import ru.practicum.ewm.repository.CategoriesRepository;
-import ru.practicum.ewm.repository.EventRepository;
-import ru.practicum.ewm.repository.LocationRepository;
-import ru.practicum.ewm.repository.UserRepository;
+import ru.practicum.ewm.repository.*;
+import ru.practicum.ewm.utils.DateTimeHelper;
 import ru.practicum.ewm.utils.DefaultMessagesForException;
 import ru.practicum.ewm.utils.EventServiceHelper;
 import ru.practicum.statsclient.StatsClient;
@@ -31,15 +29,12 @@ import ru.practicum.statsdto.EndpointHitDto;
 import ru.practicum.statsdto.ViewStats;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.zip.DataFormatException;
 
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static ru.practicum.ewm.model.event.State.CANCELED;
-import static ru.practicum.ewm.model.event.State.PUBLISHED;
+import static ru.practicum.ewm.model.event.State.*;
 
 @Slf4j
 @Service
@@ -49,6 +44,7 @@ public class EventService {
     private final CategoriesRepository categoriesRepository;
     private final UserRepository userRepository;
     private final LocationRepository locationRepository;
+    private final ParticipationRequestRepository participationRequestRepository;
 
     private final EventServiceHelper eventServiceHelper;
 
@@ -80,70 +76,105 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
-    public List<EventShortDto> getEventsByPublicUser(String text,
-                                                     List<Long> categories,
-                                                     Boolean paid,
-                                                     LocalDateTime rangeStart,
-                                                     LocalDateTime rangeEnd,
-                                                     Boolean onlyAvailable,
-                                                     String sort,
-                                                     Integer from,
-                                                     Integer size
+    public List<EventShortDto> getEventsByPublicUser(
+            String text,
+            List<Long> categories,
+            Boolean paid,
+            LocalDateTime rangeStart,
+            LocalDateTime rangeEnd,
+            Boolean onlyAvailable,
+            String sort,
+            Integer from,
+            Integer size,
+            HttpServletRequest request
     ) throws NumberFormatException {
-        String sortedBy = "";
-        if (nonNull(sort)) {
-            if (sort.equals(EventSortType.EVENT_DATE.toString())) sortedBy = "eventDate";
-            else sortedBy = "id";
+        if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
+            try {
+                throw new DataFormatException("Некорректный запрос.");
+            } catch (DataFormatException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        Specification<EventEntity> specification = Specification.where(null);
+        specification = getEventEntitySpecificationByUser(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort);
+        List<EventEntity> pageEvents = eventRepository
+                .findAll(specification, getPageRequest(sort, from, size))
+                .getContent();
+
+        if (nonNull(onlyAvailable)) {
+            if (onlyAvailable) {
+                pageEvents = eventRepository.findAllWithAvailableLimit(specification, getPageRequest(sort, from, size))
+                        .getContent();
+            }
         }
 
+        return pageEvents.isEmpty() ? Collections.emptyList() : pageEvents.stream()
+                .map(eventEntity -> {
+                    Integer countOfConfirmedRequests =
+                            participationRequestRepository.findCountOfConfirmedRequests(eventEntity.getId(), CONFIRMED);
+                    List<ViewStats> viewStats = getViewStats(request, eventEntity);
+                    Long hits = 0L;
+                    if (nonNull(viewStats)) {
+                        if (!viewStats.isEmpty()) hits = viewStats.getFirst().getHits();
+                    }
+                    eventEntity.setConfirmedRequests(countOfConfirmedRequests);
 
-        Set<EventEntity> allEventEntities = getAllEventEntities(eventServiceHelper.getPageRequestWithSort(
-                from,
-                size,
-                sortedBy)
-        );
-
-        return allEventEntities.stream()
-                .filter(event -> {
-                    if (text != null) {
-                        return event.getTitle().toLowerCase().contains(text.toLowerCase().trim());
-                    }
-                    return true;
-                }).filter(event -> {
-                    if (categories != null) {
-                        return categories.contains(event.getCategory().getId());
-                    }
-                    return true;
-                }).filter(event -> {
-                    if (paid != null) {
-                        return event.getPaid();
-                    }
-                    return true;
-                }).filter(event -> {
-                    if (onlyAvailable != null) {
-                        Integer participantLimit = event.getParticipantLimit();
-                        Integer confirmedRequests = event.getConfirmedRequests();
-                        return !confirmedRequests.equals(participantLimit);
-                    }
-                    return true;
-                }).filter(event -> {
-                    if (rangeStart != null && rangeEnd != null) {
-                        return event.getEventDate().isAfter(rangeStart)
-                               && event.getEventDate().isBefore(rangeEnd);
-                    } else {
-                        try {
-                            throw new DataFormatException("Некорректная дата.");
-                        } catch (DataFormatException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }).map(eventEntity -> {
-                    UserEntity userEntity = userRepository.findById(eventEntity.getInitiator().getId()).orElseThrow(
-                            () -> new EntityNotFoundException("Такой инициатор не был найден.")
+                    return EventMapper.toShortEventDto(
+                            eventEntity,
+                            UserMapper.toUserShortDto(eventEntity.getInitiator()),
+                            hits,
+                            countOfConfirmedRequests
                     );
+                })
+                .toList();
+    }
 
-                    return EventMapper.toShortEventDto(eventEntity, UserMapper.toUserShortDto(userEntity));
-                }).toList();
+    private PageRequest getPageRequest(
+            String sort,
+            Integer from,
+            Integer size
+    ) {
+        String sortBy = "views";
+
+        if (nonNull(sort)) {
+            if (sort.equalsIgnoreCase("event_date")) {
+                sortBy = "eventDate";
+            }
+            return eventServiceHelper.getPageRequestWithSort(
+                    from,
+                    size,
+                    sortBy
+            );
+        } else {
+            return eventServiceHelper.getPageRequest(from, size);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public EventFullDto getEventByIdWithoutUser(
+            Long eventId,
+            HttpServletRequest request
+    ) throws NumberFormatException {
+        EventEntity eventEntity = eventRepository.findPublishedEventById(eventId, PUBLISHED)
+                .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.EVENT_NOT_FOUND));
+
+        EndpointHitDto endpointHitDto = new EndpointHitDto(
+                APP,
+                request.getRequestURI(),
+                request.getRemoteAddr(),
+                LocalDateTime.now()
+        );
+        statsClient.saveHit(endpointHitDto);
+
+        List<ViewStats> viewStats = getViewStats(request, eventEntity);
+        Long hits = viewStats.getFirst().getHits();
+        Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
+
+        return EventMapper.toEventFullDto(
+                eventEntity,
+                hits,
+                confirmedRequests
+        );
     }
 
     @Transactional(readOnly = true)
@@ -164,15 +195,14 @@ public class EventService {
                 );
 
         if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
-            throw new IllegalArgumentException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
+            throw new ForbiddenException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
         if (!eventEntity.getState().equals(PUBLISHED))
-            throw new IllegalArgumentException("Событие не было опубликовано.");
+            throw new ForbiddenException("Событие не было опубликовано.");
 
         List<ViewStats> viewStats = getViewStats(request, eventEntity);
 
-        Long hits = (viewStats.isEmpty()) ? 0L : viewStats.getFirst().getHits();
-
+        Long hits = viewStats.getFirst().getHits();
         EndpointHitDto endpointHitDto = new EndpointHitDto(
                 APP,
                 request.getRequestURI(),
@@ -181,13 +211,12 @@ public class EventService {
         );
 
         statsClient.saveHit(endpointHitDto);
+        Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
 
         return EventMapper.toEventFullDto(
                 eventEntity,
-                UserMapper.toUserShortDto(userEntity),
-                CategoryMapper.toDto(eventEntity.getCategory()),
-                LocationMapper.toLocationDto(eventEntity.getLocation()),
-                hits
+                hits,
+                confirmedRequests
         );
     }
 
@@ -210,63 +239,35 @@ public class EventService {
             }
         }
 
-        Set<EventEntity> allEventEntities = eventRepository.findAllByAdmin(
+        Specification<EventEntity> specification =
+                getEventEntitySpecificationByAdmin(users, states, categories, rangeStart, rangeEnd);
+
+        List<EventEntity> filteredEvents = eventRepository.findAll(
+                specification,
                 eventServiceHelper.getPageRequest(from, size)
-        );
+        ).getContent();
 
-        if (allEventEntities.isEmpty()) return Collections.emptyList();
+        log.info("[DEBUG] Filtered events {}", filteredEvents);
 
-        List<EventEntity> filteredEvents = allEventEntities.stream()
-                .filter(event -> {
-                    if (users != null && !users.isEmpty()) {
-                        Long initiatorId = event.getInitiator().getId();
-                        if (!users.contains(initiatorId)) {
-                            return false;
-                        }
-                    }
-                    if (states != null && !states.isEmpty()) {
-                        String eventState = event.getState().getName();
-                        boolean stateMatches = states.stream()
-                                .anyMatch(state -> state.equalsIgnoreCase(eventState));
-                        if (!stateMatches) {
-                            return false;
-                        }
-                    }
-                    if (categories != null && !categories.isEmpty()) {
-                        Long categoryId = event.getCategory().getId();
-                        if (!categories.contains(categoryId)) {
-                            return false;
-                        }
-                    }
-                    return true;
-                })
-                .toList();
+        List<EventFullDto> eventFullDtos = getEventFullDtos(filteredEvents, request);
+        log.info("[DEBUG] Event full dtos {}", eventFullDtos);
 
-        return filteredEvents.stream().map(eventEntity -> {
-            UserEntity userEntity = userRepository.findById(eventEntity.getInitiator().getId())
-                    .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND));
-
-            List<ViewStats> viewStats = getViewStats(request, eventEntity);
-
-            return EventMapper.toEventFullDto(eventEntity,
-                    UserMapper.toUserShortDto(userEntity),
-                    CategoryMapper.toDto(eventEntity.getCategory()),
-                    LocationMapper.toLocationDto(eventEntity.getLocation()),
-                    viewStats.isEmpty() ? 0L : viewStats.getFirst().getHits());
-        }).toList();
+        return filteredEvents.isEmpty()
+                ? Collections.emptyList()
+                : eventFullDtos;
     }
-
 
     @Transactional
     public EventFullDto createEvent(
             Long userId,
             NewEventDto newEventDto
-    ) throws ForbiddenException, NumberFormatException, ConstraintViolationException {
+    ) throws NumberFormatException {
         log.info("Создание нового события пользователя с id: {}. Данные события: {}", userId, newEventDto);
+        isCorrectDate(newEventDto.getEventDate());
 
         UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND));
-        log.debug("Найден пользователь: {}", userEntity);
+        log.debug("[DEBUG] Найден пользователь: {}", userEntity);
 
         CategoryEntity categoryEntity = categoriesRepository.findById(newEventDto.getCategory())
                 .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.CATEGORY_NOT_FOUND));
@@ -281,13 +282,13 @@ public class EventService {
 
         EventEntity eventEntity = EventMapper.toEntity(newEventDto, categoryEntity, savedLocationEntity, userEntity);
         EventEntity savedEntity = eventRepository.save(eventEntity);
-        log.info("Создано событие с id: {}", savedEntity.getId());
+        log.info("Создано событие : {}", savedEntity);
+        Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
 
-        return EventMapper.toEventFullDto(savedEntity,
-                UserMapper.toUserShortDto(userEntity),
-                CategoryMapper.toDto(categoryEntity),
-                LocationMapper.toLocationDto(savedLocationEntity),
-                0L
+        return EventMapper.toEventFullDto(
+                savedEntity,
+                0L,
+                confirmedRequests
         );
     }
 
@@ -296,100 +297,308 @@ public class EventService {
                                     UpdateEventAdminRequest updateEventAdminRequest,
                                     HttpServletRequest request
     ) throws NumberFormatException {
-        if (isNull(eventId) || isNull(updateEventAdminRequest)) {
-            throw new IllegalArgumentException("Некорректные данные.");
-        }
-        EventEntity eventEntity = eventRepository.findById(eventId)
+        EventEntity eventEntity = eventRepository.findEventEntityById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.EVENT_NOT_FOUND));
 
         UserEntity userEntity = userRepository.findById(eventEntity.getInitiator().getId())
                 .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND));
 
-        if (eventRepository.isExistsByEventIdAndUserId(eventId, userEntity.getId()))
+        if (!eventRepository.isExistsByEventIdAndUserId(eventId, userEntity.getId()))
             throw new IllegalArgumentException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
-        CategoryEntity categoryEntity = categoriesRepository.findById(updateEventAdminRequest.getCategory())
-                .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.CATEGORY_NOT_FOUND));
+        if (eventEntity.getState().equals(PUBLISHED) || eventEntity.getState().equals(REJECTED)) {
+            throw new ForbiddenException("Некорректное событие.");
+        }
 
-        eventRepository.updateEventEntity(
-                eventId,
-                updateEventAdminRequest,
-                LocalDateTime.parse(updateEventAdminRequest.getEventDate()),
-                locationRepository.findEntityIdByLatAndLon(
-                        updateEventAdminRequest.getLocation().getLat(),
-                        updateEventAdminRequest.getLocation().getLon()
-                ),
-                State.fromStringToState(updateEventAdminRequest.getStateAction()));
+        if (nonNull(updateEventAdminRequest.getCategory())) {
+            CategoryEntity categoryEntity = categoriesRepository.findById(updateEventAdminRequest.getCategory())
+                    .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.CATEGORY_NOT_FOUND));
+            eventEntity.setCategory(categoryEntity);
+        }
 
-        List<ViewStats> viewStats = getViewStats(request, eventEntity);
+        if (nonNull(updateEventAdminRequest.getAnnotation())) {
+            eventEntity.setAnnotation(updateEventAdminRequest.getAnnotation());
+        }
 
+        if (nonNull(updateEventAdminRequest.getTitle())) {
+            eventEntity.setTitle(updateEventAdminRequest.getTitle());
+        }
+
+        if (nonNull(updateEventAdminRequest.getDescription())) {
+            eventEntity.setDescription(updateEventAdminRequest.getDescription());
+        }
+
+        if (nonNull(updateEventAdminRequest.getStateAction())) {
+            String state = "";
+            if (updateEventAdminRequest.getStateAction().equals(StateActionAdmin.PUBLISH_EVENT.getName())) {
+                state = PUBLISHED.getName();
+                eventEntity.setPublishedOn(LocalDateTime.now());
+            } else {
+                state = REJECTED.getName();
+            }
+
+            eventEntity.setState(fromStringToState(state));
+        }
+
+        if (nonNull(updateEventAdminRequest.getEventDate())) {
+            if (!LocalDateTime.parse(
+                    updateEventAdminRequest.getEventDate(),
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).isAfter(LocalDateTime.now())) {
+                throw new ValidationException("Некорректная дата");
+            }
+
+            LocalDateTime parse = LocalDateTime.parse(updateEventAdminRequest.getEventDate(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            eventEntity.setEventDate(parse);
+        }
+
+        if (nonNull(updateEventAdminRequest.getLocation())) {
+            eventEntity.setLocation(eventServiceHelper.checkLocation(
+                    updateEventAdminRequest.getLocation().getLat(),
+                    updateEventAdminRequest.getLocation().getLon())
+            );
+        }
+
+        if (nonNull(updateEventAdminRequest.getPaid())) {
+            eventEntity.setPaid(updateEventAdminRequest.getPaid());
+        }
+
+        if (nonNull(updateEventAdminRequest.getRequestModeration())) {
+            eventEntity.setRequestModeration(updateEventAdminRequest.getRequestModeration());
+        }
+
+        EventEntity savedEvent = eventRepository.save(eventEntity);
+        List<ViewStats> viewStats = getViewStats(request, savedEvent);
+
+        Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
         return EventMapper.toEventFullDto(
-                eventEntity,
-                UserMapper.toUserShortDto(userEntity),
-                CategoryMapper.toDto(categoryEntity),
-                LocationMapper.toLocationDto(eventEntity.getLocation()),
-                viewStats.isEmpty() ? 0L : viewStats.getFirst().getHits()
+                savedEvent,
+                viewStats.isEmpty() ? 0L : viewStats.getFirst().getHits(),
+                confirmedRequests
         );
     }
 
     @Transactional
-    public EventFullDto updateEventByUserIdAndEventId(Long userId,
-                                                      Long eventId,
-                                                      UpdateEventUserRequest updateEventUserRequest,
-                                                      HttpServletRequest request
+    public EventFullDto updateEventByUserIdAndEventId(
+            Long userId,
+            Long eventId,
+            UpdateEventUserRequest updateEventUserRequest,
+            HttpServletRequest request
     ) throws NumberFormatException {
+        if (nonNull(updateEventUserRequest.getEventDate())) {
+            LocalDateTime parsedEventDate =
+                    LocalDateTime.parse(updateEventUserRequest.getEventDate(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            if (parsedEventDate.isBefore(LocalDateTime.now().plusHours(2L)))
+                throw new ValidationException("Некорректная дата");
+        }
+
         if (!userRepository.isUserExistsById(userId))
             throw new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND);
 
         if (!eventRepository.isEventEntityExistsById(eventId))
             throw new EntityNotFoundException(DefaultMessagesForException.EVENT_NOT_FOUND);
 
-        UserEntity userEntity = userRepository.findById(userId).get();
-
         EventEntity eventEntity = eventRepository.findEventEntityByUserId(userId, eventId)
                 .orElseThrow(() ->
                         new IllegalArgumentException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER)
                 );
 
+        if (eventEntity.getState().equals(PUBLISHED))
+            throw new ForbiddenException("");
+
         if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
-            throw new IllegalArgumentException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
+            throw new ForbiddenException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
-        if (!eventEntity.getState().equals(CANCELED) || !eventEntity.getRequestModeration())
-            throw new IllegalArgumentException("Событие нельзя обновить.");
+        if (nonNull(updateEventUserRequest.getEventDate())) {
+            isCorrectDate(updateEventUserRequest.getEventDate());
+            eventEntity.setEventDate(LocalDateTime.parse(updateEventUserRequest.getEventDate(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        }
 
-        if (!LocalDateTime.parse(updateEventUserRequest.getEventDate()).isAfter(LocalDateTime.now().plusHours(2L)))
-            throw new IllegalArgumentException("Некорректная дата.");
+        if (nonNull(updateEventUserRequest.getLocation())
+                && nonNull(updateEventUserRequest.getLocation().getLat())
+                && nonNull(updateEventUserRequest.getLocation().getLon())
+        ) {
+            LocationEntity location = eventServiceHelper.checkLocation(
+                    updateEventUserRequest.getLocation().getLat(),
+                    updateEventUserRequest.getLocation().getLon()
+            );
 
-        LocationEntity locationEntity = eventServiceHelper.checkLocation(
-                updateEventUserRequest.getLocation().getLat(),
-                updateEventUserRequest.getLocation().getLon()
-        );
+            eventEntity.setLocation(location);
+        }
 
-        eventRepository.updateEventEntity(
-                eventEntity.getId(),
-                updateEventUserRequest,
-                LocalDateTime.parse(updateEventUserRequest.getEventDate()),
-                locationEntity.getId(),
-                State.fromStringToState(updateEventUserRequest.getStateAction())
+        if (nonNull(updateEventUserRequest.getDescription()))
+            eventEntity.setDescription(updateEventUserRequest.getDescription());
 
-        );
+        if (nonNull(updateEventUserRequest.getPaid()))
+            eventEntity.setPaid(updateEventUserRequest.getPaid());
 
-        List<ViewStats> viewStats = getViewStats(request, eventEntity);
+        if (nonNull(updateEventUserRequest.getParticipantLimit()))
+            eventEntity.setParticipantLimit(updateEventUserRequest.getParticipantLimit());
 
-        return EventMapper.toEventFullDto(eventEntity,
-                UserMapper.toUserShortDto(userEntity),
-                CategoryMapper.toDto(eventEntity.getCategory()),
-                LocationMapper.toLocationDto(locationEntity),
-                viewStats.isEmpty() ? 0L : viewStats.getFirst().getHits()
+        if (nonNull(updateEventUserRequest.getRequestModeration()))
+            eventEntity.setRequestModeration(updateEventUserRequest.getRequestModeration());
+
+        if (nonNull(updateEventUserRequest.getStateAction())) {
+            StateActionPrivate.isCorrectState(updateEventUserRequest.getStateAction());
+            if (updateEventUserRequest.getStateAction().equals(StateActionPrivate.SEND_TO_REVIEW.getDescription())) {
+                eventEntity.setState(State.PENDING);
+            } else {
+                eventEntity.setState(CANCELED);
+            }
+        }
+
+        if (nonNull(updateEventUserRequest.getTitle()))
+            eventEntity.setTitle(updateEventUserRequest.getTitle());
+
+        EventEntity savedEntity = eventRepository.save(eventEntity);
+        List<ViewStats> viewStats = getViewStats(request, savedEntity);
+
+        Long hits = 0L;
+        if (nonNull(viewStats) && !viewStats.isEmpty()) {
+            if (nonNull(viewStats.getFirst())) {
+                hits = viewStats.getFirst().getHits();
+            }
+        }
+        Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
+
+        return EventMapper.toEventFullDto(
+                savedEntity,
+                hits,
+                confirmedRequests
         );
     }
 
-    private Set<EventEntity> getAllEventEntities(PageRequest pageRequest) {
-        return eventRepository.findAll(pageRequest);
+    private static Specification<EventEntity> getEventEntitySpecificationByAdmin(
+            List<Long> users,
+            List<String> states,
+            List<Long> categories,
+            LocalDateTime rangeStart,
+            LocalDateTime rangeEnd
+    ) {
+        Specification<EventEntity> specification = Specification.where(null);
+
+        if (nonNull(users) && !users.isEmpty() && users.getFirst() != 0) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    root.get("initiator").get("id").in(users));
+        }
+
+        if (nonNull(states)) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    root.get("state").as(String.class).in(states));
+        }
+
+        if (nonNull(categories) && !categories.isEmpty() && categories.getFirst() != 0) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    root.get("category").get("id").in(categories));
+        }
+
+        if (nonNull(rangeStart)) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.greaterThanOrEqualTo(root.get("eventDate"), rangeStart));
+        }
+
+        if (nonNull(rangeEnd)) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.lessThanOrEqualTo(root.get("eventDate"), rangeEnd));
+        }
+        return specification;
+    }
+
+    private static Specification<EventEntity> getEventEntitySpecificationByUser(
+            String text,
+            List<Long> categories,
+            Boolean paid,
+            LocalDateTime rangeStart,
+            LocalDateTime rangeEnd,
+            Boolean onlyAvailable,
+            String sort
+    ) {
+        Specification<EventEntity> specification = Specification.where(null);
+
+        return Specification.where((root, query, criteriaBuilder) -> {
+            Predicate predicate = criteriaBuilder.conjunction();
+
+            if (categories != null && !categories.isEmpty()) {
+                predicate = criteriaBuilder.and(predicate, root.get("category").get("id").in(categories));
+            }
+
+            if (rangeStart != null) {
+                predicate = criteriaBuilder.and(predicate, criteriaBuilder.greaterThanOrEqualTo(root.get("eventDate"), rangeStart));
+            }
+
+            if (rangeEnd != null) {
+                predicate = criteriaBuilder.and(predicate, criteriaBuilder.lessThanOrEqualTo(root.get("eventDate"), rangeEnd));
+            }
+
+            if (text != null && !text.isEmpty()) {
+                String likePattern = "%" + text.toLowerCase() + "%";
+                predicate = criteriaBuilder.and(predicate,
+                        criteriaBuilder.or(
+                                criteriaBuilder.like(criteriaBuilder.lower(root.get("annotation")), likePattern),
+                                criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), likePattern),
+                                criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), likePattern)
+                        ));
+            }
+
+            if (paid != null) {
+                predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root.get("paid"), paid));
+            }
+
+            if (onlyAvailable != null && onlyAvailable) {
+                predicate = criteriaBuilder.and(predicate,
+                        criteriaBuilder.lessThanOrEqualTo(root.get("confirmedRequests"), root.get("participantLimit")));
+            }
+
+            if (sort != null && !sort.isEmpty()) {
+                if ("eventDate".equalsIgnoreCase(sort)) {
+                    query.orderBy(criteriaBuilder.asc(root.get("eventDate")));
+                } else if ("views".equalsIgnoreCase(sort)) {
+                    query.orderBy(criteriaBuilder.desc(root.get("views")));
+                }
+            }
+
+            return predicate;
+        });
+    }
+
+    private List<EventFullDto> getEventFullDtos(List<EventEntity> eventEntities, HttpServletRequest request) {
+        return eventEntities.stream()
+                .map(eventEntity -> {
+                    UserEntity userEntity = userRepository.findById(eventEntity.getInitiator().getId())
+                            .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND));
+                    log.info("[DEBUG] For event full dto {}", eventEntity);
+
+                    List<ViewStats> viewStats = getViewStats(request, eventEntity);
+                    log.info("[DEBUG] View stats {}", viewStats);
+
+                    Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
+                    if (nonNull(confirmedRequests)) {
+                        eventEntity.setConfirmedRequests(confirmedRequests);
+                    }
+
+                    Long hits = 0L;
+                    if (nonNull(viewStats) && !viewStats.isEmpty()) {
+                        if (nonNull(viewStats.getFirst())) {
+                            hits = viewStats.getFirst().getHits();
+                        }
+                    }
+
+                    return EventMapper.toEventFullDto(
+                            eventEntity,
+                            hits,
+                            confirmedRequests
+                    );
+                }).toList();
+    }
+
+    private static void isCorrectDate(String date) {
+        LocalDateTime localDateTime = DateTimeHelper.fromStringToLocalDateTime(date);
+        if (!localDateTime.isAfter(LocalDateTime.now().plusHours(2L)))
+            throw new ValidationException("Некорректная дата.");
     }
 
     private List<ViewStats> getViewStats(HttpServletRequest request, EventEntity eventEntity) {
-        ResponseEntity<?> responseStats = statsClient.getStats(
+        log.info("[DEBUG] Get view stats for {}, {}", eventEntity, request.getRequestURI());
+        ResponseEntity<Object> responseStats = statsClient.getStats(
                 eventEntity.getCreatedOn(),
                 LocalDateTime.now(),
                 List.of(request.getRequestURI()),

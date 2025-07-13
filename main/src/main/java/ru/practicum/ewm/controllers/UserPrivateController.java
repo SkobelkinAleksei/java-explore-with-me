@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.model.event.EventFullDto;
@@ -24,11 +25,12 @@ public class UserPrivateController {
     private final EventService eventService;
 
     @PostMapping
-    public ResponseEntity<EventFullDto> createEvent(@PathVariable Long userId,
-                                                    @RequestBody @Valid NewEventDto newEventDto
+    public ResponseEntity<EventFullDto> createEvent(
+            @PathVariable("userId") Long userId,
+            @RequestBody @Valid NewEventDto newEventDto
     ) {
         log.info("Поступил запрос на создание нового события от пользователя с id: {}", userId);
-        return ResponseEntity.ok().body(eventService.createEvent(userId, newEventDto));
+        return ResponseEntity.status(HttpStatus.CREATED).body(eventService.createEvent(userId, newEventDto));
     }
 
     @GetMapping
@@ -53,7 +55,7 @@ public class UserPrivateController {
     public ResponseEntity<EventFullDto> updateEventByUserIdAndEventId(
             @PathVariable Long userId,
             @PathVariable Long eventId,
-            @RequestBody UpdateEventUserRequest updateEventUserRequest,
+            @RequestBody @Valid UpdateEventUserRequest updateEventUserRequest,
             HttpServletRequest request
     ) {
         return ResponseEntity.ok().body(

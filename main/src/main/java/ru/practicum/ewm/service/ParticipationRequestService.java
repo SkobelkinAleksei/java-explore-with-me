@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.ewm.exeption.ForbiddenException;
 import ru.practicum.ewm.mapper.ParticipationRequestMapper;
 import ru.practicum.ewm.model.event.*;
 import ru.practicum.ewm.model.participation.ParticipationRequestDto;
@@ -28,45 +29,50 @@ public class ParticipationRequestService {
     private final EventRepository eventRepository;
 
     @Transactional
-    public ParticipationRequestDto createRequest(Long userId,
-                                                 Long eventId
+    public ParticipationRequestDto createRequest(
+            Long userId,
+            Long eventId
     ) {
         UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Пользователь не был найден.")
                 );
+
         EventEntity eventEntity = eventRepository.findById(eventId)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Событие не было найдено.")
                 );
 
         if (requestRepository.isExistsByRequesterAndEventId(userId, eventId)) {
-            throw new IllegalArgumentException("Заявка уже отправлена.");
+            throw new ForbiddenException("Заявка уже отправлена.");
         }
 
         if (eventEntity.getInitiator().getId().equals(userEntity.getId())) {
-            throw new IllegalArgumentException("Инициатор события не может добавить запрос на участие в своём событии.");
+            throw new ForbiddenException("Инициатор события не может добавить запрос на участие в своём событии.");
         }
 
         if (!eventEntity.getState().equals(State.PUBLISHED)) {
-            throw new IllegalArgumentException("Нельзя участвовать в неопубликованном событии.");
+            throw new ForbiddenException("Нельзя участвовать в неопубликованном событии.");
+        }
+        Integer countOfRequests = requestRepository.findCountOfConfirmedRequests(eventEntity.getId(), State.CONFIRMED);
+
+        if (eventEntity.getParticipantLimit() > 0
+                && countOfRequests >= eventEntity.getParticipantLimit()
+        ) {
+            throw new ForbiddenException(DefaultMessagesForException.EVENT_LIMIT_REACHED);
         }
 
-        if (eventEntity.getParticipantLimit().equals(eventEntity.getConfirmedRequests())) {
-            throw new IllegalArgumentException("Достигнут лимит запросов на участие.");
-        }
+        ParticipationRequestEntity participationEntity = ParticipationRequestMapper.toParticipationEntity(
+                        eventEntity,
+                        userEntity
+                );
 
-        ParticipationRequestEntity participationEntity = ParticipationRequestMapper
-                .toParticipationEntity(eventEntity, userEntity);
-
-        if (!eventEntity.getRequestModeration() && eventEntity.getParticipantLimit() != 0) {
+        if (!eventEntity.getRequestModeration() || eventEntity.getParticipantLimit() == 0) {
             participationEntity.setStatus(State.CONFIRMED);
-
-        } else {
-            participationEntity.setStatus(State.PENDING);
         }
 
-        return ParticipationRequestMapper.toParticipationDto(requestRepository.save(participationEntity));
+        ParticipationRequestEntity saved = requestRepository.save(participationEntity);
+        return ParticipationRequestMapper.toParticipationDto(saved);
     }
 
     @Transactional(readOnly = true)
@@ -109,25 +115,24 @@ public class ParticipationRequestService {
             Long eventId,
             EventRequestStatusUpdateRequest eventRequestStatusUpdateRequest
     ) {
-        // Проверка существования пользователя
         if (!userRepository.isUserExistsById(userId))
             throw new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND);
 
-        // Получение события
         EventEntity eventEntity = eventRepository.findById(eventId).orElseThrow(() ->
                 new EntityNotFoundException(DefaultMessagesForException.EVENT_NOT_FOUND));
 
-        // Проверка, связана ли пользователь с событием
         if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
             throw new IllegalArgumentException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
-        // Получение текущего количества подтвержденных заявок
-        Long countOfConfirmedRequests = requestRepository.findCountOfConfirmedRequests(
+        Integer countOfConfirmedRequests = requestRepository.findCountOfConfirmedRequests(
                 eventEntity.getId(),
                 State.CONFIRMED
         );
 
-        // Получение всех заявок в статусе PENDING по переданным requestIds
+        if (countOfConfirmedRequests >= eventEntity.getParticipantLimit()) {
+            throw new ForbiddenException("Достигнут лимит заявок");
+        }
+
         List<ParticipationRequestEntity> allPendingRequests = requestRepository.findAllPendingRequestsConfirmed(
                 eventRequestStatusUpdateRequest.getRequestIds(),
                 eventId,
@@ -139,22 +144,18 @@ public class ParticipationRequestService {
 
         for (ParticipationRequestEntity request : allPendingRequests) {
             if (eventRequestStatusUpdateRequest.getStatus().equals(State.REJECTED.getName())) {
-                // Отклоняем заявку
                 request.setStatus(State.REJECTED);
                 requestRepository.save(request);
                 rejectedRequests.add(ParticipationRequestMapper.toParticipationDto(request));
             } else if (eventRequestStatusUpdateRequest.getStatus().equals(State.CONFIRMED.getName())) {
-                // Перед подтверждением проверяем лимит участников
-                Long currentConfirmedCount = requestRepository.findCountOfConfirmedRequests(eventEntity.getId(), State.CONFIRMED);
-                if (currentConfirmedCount < eventEntity.getParticipantLimit()) {
-                    // Подтверждаем заявку
+                if (countOfConfirmedRequests < eventEntity.getParticipantLimit()) {
                     request.setStatus(State.CONFIRMED);
                     requestRepository.save(request);
                     confirmedRequests.add(ParticipationRequestMapper.toParticipationDto(request));
                 } else {
-                     request.setStatus(State.REJECTED);
-                     requestRepository.save(request);
-                     rejectedRequests.add(ParticipationRequestMapper.toParticipationDto(request));
+                    request.setStatus(State.REJECTED);
+                    requestRepository.save(request);
+                    rejectedRequests.add(ParticipationRequestMapper.toParticipationDto(request));
                 }
             }
         }

@@ -51,7 +51,7 @@ public class UserService {
                 from != null ? from : 0,
                 size != null ? size : 10,
                 Sort.by("id")
-                        .descending()
+                        .ascending()
         );
 
         if (ids != null) {
