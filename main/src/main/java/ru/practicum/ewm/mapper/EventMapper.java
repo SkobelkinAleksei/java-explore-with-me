@@ -21,8 +21,8 @@ public class EventMapper {
         return EventShortDto.builder()
                 .id(event.getId())
                 .annotation(event.getAnnotation())
-                .category(event.getCategory().getName())
-                .eventDate(event.getEventDate().toString())
+                .category(CategoryMapper.toDto(event.getCategory()))
+                .eventDate(event.getEventDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
                 .initiator(userShortDto)
                 .paid(event.getPaid())
                 .title(event.getTitle())
@@ -37,8 +37,8 @@ public class EventMapper {
         return EventShortDto.builder()
                 .id(event.getId())
                 .annotation(event.getAnnotation())
-                .category(event.getCategory().getName())
-                .eventDate(event.getEventDate().toString())
+                .category(CategoryMapper.toDto(event.getCategory()))
+                .eventDate(event.getEventDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
                 .initiator(userShortDto)
                 .views(hits)
                 .confirmedRequests(countOfConfirmedRequests)
@@ -52,7 +52,7 @@ public class EventMapper {
             Long hits,
             Integer confirmedRequests
     ) {
-        State state = eventEntity.getRequestModeration() ? State.PENDING : eventEntity.getState();
+//        State state = eventEntity.getRequestModeration() ? State.PENDING : eventEntity.getState();
 
         return EventFullDto.builder()
                 .id(eventEntity.getId())
@@ -63,7 +63,7 @@ public class EventMapper {
                 .eventDate(eventEntity.getEventDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
                 .createdOn(eventEntity.getCreatedOn().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
                 .publishedOn(eventEntity.getCreatedOn().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
-                .state(state.getName())
+                .state(eventEntity.getState().getName())
                 .paid(eventEntity.getPaid())
                 .requestModeration(eventEntity.getRequestModeration())
                 .participantLimit(eventEntity.getParticipantLimit())
@@ -90,7 +90,7 @@ public class EventMapper {
                 .location(locationEntity)
                 .eventDate(DateTimeHelper.fromStringToLocalDateTime(newEventDto.getEventDate()))
                 .requestModeration(newEventDto.getRequestModeration())
-                .state(newEventDto.getRequestModeration() ? State.PENDING : State.CONFIRMED)
+                .state(State.PENDING)
                 .paid(nonNull(newEventDto.getPaid()) ? newEventDto.getPaid() : false)
                 .participantLimit(nonNull(newEventDto.getParticipantLimit()) ? newEventDto.getParticipantLimit() : 0L)
                 .annotation(newEventDto.getAnnotation())

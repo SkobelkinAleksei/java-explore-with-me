@@ -18,7 +18,7 @@ public class CompilationMapper {
     public CompilationEntity toEntity(NewCompilationDto compilationDto) {
         return CompilationEntity.builder()
                 .title(compilationDto.getTitle())
-                .pinned(false)
+                .pinned(compilationDto.getPinned())
                 .build();
     }
 

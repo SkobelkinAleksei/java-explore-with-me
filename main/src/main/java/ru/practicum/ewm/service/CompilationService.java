@@ -25,12 +25,10 @@ import ru.practicum.ewm.repository.ParticipationRequestRepository;
 import ru.practicum.ewm.repository.UserRepository;
 import ru.practicum.ewm.utils.DefaultMessagesForException;
 import ru.practicum.ewm.utils.EventServiceHelper;
-import ru.practicum.statsclient.StatsClient;
 import ru.practicum.statsdto.ViewStats;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -46,7 +44,7 @@ public class CompilationService {
     private final UserRepository userRepository;
 
     private final EventServiceHelper eventServiceHelper;
-    private final StatsClient statsClient;
+//    private final StatsClient statsClient;
 
     @Transactional(readOnly = true)
     public CompilationDto getCompilationById(Long compId, HttpServletRequest request) throws NumberFormatException {
@@ -83,16 +81,26 @@ public class CompilationService {
         if (isNull(compilation)) throw new IllegalArgumentException(DefaultMessagesForException.COMPILATION_IS_NULL);
 
         log.info("Создание новой подборки: {}", compilation);
-        CompilationEntity compilationEntity = CompilationMapper.toEntity(compilation);
+        CompilationEntity compilationEntity = new CompilationEntity();
 
-        Set<EventEntity> eventEntitiesByIds = eventRepository.findEventEntitiesByIds(compilation.getEvents());
-        log.debug("Найдено {} событий для подборки", eventEntitiesByIds.size());
+        if (nonNull(compilation.getPinned()))
+            compilationEntity.setPinned(compilation.getPinned());
+        else compilationEntity.setPinned(false);
 
-        compilationEntity.setEvents(eventEntitiesByIds);
+        if (nonNull(compilation.getTitle())) {
+            compilationEntity.setTitle(compilation.getTitle());
+        }
+
+        if (nonNull(compilation.getEvents()) && !compilation.getEvents().isEmpty()) {
+            Set<EventEntity> eventEntitiesByIds = eventRepository.findEventEntitiesByIds(compilation.getEvents());
+            log.debug("Найдено {} событий для подборки", eventEntitiesByIds.size());
+            compilationEntity.setEvents(eventEntitiesByIds);
+        } else compilationEntity.setEvents(new HashSet<>());
+
         CompilationEntity savedEntity = compilationRepository.save(compilationEntity);
         log.info("Подборка сохранена с id: {}", savedEntity.getId());
 
-        List<EventShortDto> eventShortDtos = getEventShortDtos(eventEntitiesByIds);
+        List<EventShortDto> eventShortDtos = getEventShortDtos(compilationEntity.getEvents());
         log.debug("Создан список EventShortDtos для подборки");
 
         return CompilationMapper.toDto(savedEntity, eventShortDtos);
@@ -120,13 +128,19 @@ public class CompilationService {
                 () -> new EntityNotFoundException("Подборка не была найдена.")
         );
         log.debug("Найдена подборка: {}", compilationEntity);
-        Set<EventEntity> events = compilationEntity.getEvents();
+        Set<EventEntity> oldEvents = compilationEntity.getEvents();
+        List<Long> eventsId = compilationRequest.getEventsId();
 
-        if (nonNull(compilationRequest.getEventsId())) {
-            Set<EventEntity> eventEntitiesByIds = eventRepository.findEventEntitiesByIds(compilationRequest.getEventsId());
-            events.addAll(eventEntitiesByIds);
-            compilationEntity.setEvents(events);
+        if (nonNull(eventsId) && !eventsId.isEmpty()) {
+            eventsId.forEach(eventId -> {
+                EventEntity eventEntity = eventRepository.findById(eventId).orElseThrow(
+                        () -> new EntityNotFoundException("")
+                );
+                oldEvents.add(eventEntity);
+            });
+            compilationEntity.setEvents(oldEvents);
         }
+
 
         if (nonNull(compilationRequest.getPinned())) {
             compilationEntity.setPinned(compilationRequest.getPinned());
@@ -135,29 +149,25 @@ public class CompilationService {
         if (nonNull(compilationRequest.getTitle())) {
             compilationEntity.setTitle(compilationRequest.getTitle());
         }
-
-        CompilationEntity updatedCompilation = compilationRepository.save(
-                compilationEntity
-        );
-
-        log.info("Подборка с id: {} обновлена", updatedCompilation.getId());
-
-        List<EventShortDto> eventShortDtos = getEventShortDtos(updatedCompilation.getEvents());
-        log.debug("Создан список EventShortDtos для обновленной подборки");
-
-        return CompilationMapper.toDto(updatedCompilation, eventShortDtos);
+        CompilationEntity saved = compilationRepository.save(compilationEntity);
+        List<EventShortDto> eventShortDtos = getEventShortDtos(saved.getEvents());
+        return CompilationMapper.toDto(saved, eventShortDtos);
     }
 
     @Transactional(readOnly = true)
     public List<CompilationDto> findAll(Boolean pinned, Integer from, Integer size, HttpServletRequest request) {
         PageRequest pageRequest = eventServiceHelper.getPageRequest(from, size);
+
         if (nonNull(pinned)) {
-            List<CompilationEntity> allPinned = compilationRepository.findAllPinned(true, pageRequest);
-            return getCompilationDtos(allPinned, request);
+                List<CompilationEntity> allPinned = compilationRepository.findAllPinned(pinned, pageRequest)
+                        .stream()
+                        .sorted(Comparator.comparing(CompilationEntity::getId).reversed()).collect(Collectors.toList());
+                return getCompilationDtos(allPinned, request);
         }
 
         List<CompilationEntity> allCompilationEntities = compilationRepository.findAllWithPagination(pageRequest);
         return getCompilationDtos(allCompilationEntities, request);
+
     }
 
     private List<EventShortDto> getEventShortDtos(Set<EventEntity> eventEntitiesByIds) {

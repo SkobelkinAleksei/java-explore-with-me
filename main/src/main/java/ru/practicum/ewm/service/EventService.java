@@ -95,7 +95,7 @@ public class EventService {
                 throw new RuntimeException(e);
             }
         }
-        Specification<EventEntity> specification = Specification.where(null);
+        Specification<EventEntity> specification;
         specification = getEventEntitySpecificationByUser(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort);
         List<EventEntity> pageEvents = eventRepository
                 .findAll(specification, getPageRequest(sort, from, size))
@@ -197,12 +197,16 @@ public class EventService {
         if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
             throw new ForbiddenException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
-        if (!eventEntity.getState().equals(PUBLISHED))
-            throw new ForbiddenException("Событие не было опубликовано.");
+//        if (!eventEntity.getState().equals(PUBLISHED))
+//            throw new ForbiddenException("Событие не было опубликовано.");
 
         List<ViewStats> viewStats = getViewStats(request, eventEntity);
 
-        Long hits = viewStats.getFirst().getHits();
+        Long hits = 0L;
+        if (nonNull(viewStats)) {
+            if (!viewStats.isEmpty()) hits = viewStats.getFirst().getHits();
+        }
+
         EndpointHitDto endpointHitDto = new EndpointHitDto(
                 APP,
                 request.getRequestURI(),
@@ -328,6 +332,10 @@ public class EventService {
             eventEntity.setDescription(updateEventAdminRequest.getDescription());
         }
 
+        if (nonNull(updateEventAdminRequest.getParticipantLimit())) {
+            eventEntity.setParticipantLimit(updateEventAdminRequest.getParticipantLimit());
+        }
+
         if (nonNull(updateEventAdminRequest.getStateAction())) {
             String state = "";
             if (updateEventAdminRequest.getStateAction().equals(StateActionAdmin.PUBLISH_EVENT.getName())) {
@@ -439,7 +447,8 @@ public class EventService {
 
         if (nonNull(updateEventUserRequest.getStateAction())) {
             StateActionPrivate.isCorrectState(updateEventUserRequest.getStateAction());
-            if (updateEventUserRequest.getStateAction().equals(StateActionPrivate.SEND_TO_REVIEW.getDescription())) {
+            if (updateEventUserRequest.getStateAction().equals(StateActionPrivate.SEND_TO_REVIEW.getDescription())
+            || eventEntity.getState().equals(CONFIRMED)) {
                 eventEntity.setState(State.PENDING);
             } else {
                 eventEntity.setState(CANCELED);

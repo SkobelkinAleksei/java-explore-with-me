@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import ru.practicum.ewm.model.event.State;
-import ru.practicum.ewm.model.participation.ParticipationRequestDto;
 import ru.practicum.ewm.model.participation.ParticipationRequestEntity;
 
 import java.util.List;
@@ -37,20 +36,12 @@ public interface ParticipationRequestRepository extends JpaRepository<Participat
             """)
     List<ParticipationRequestEntity> getAllByRequesterId(@Param("id") Long requesterId);
 
-    @Query(
-            value = """
-                    SELECT
-                     pre.id,
-                     TO_CHAR(pre.created_at, 'YYYY-MM-DD HH24:MI:SS'),
-                     pre.event_id,
-                     pre.requester_id,
-                     pre.status::text
-                    FROM participation_request pre
-                    WHERE pre.requester_id = ?
-                    AND pre.event_id = ?
-                    """,
-            nativeQuery = true)
-    List<ParticipationRequestDto> getAllByRequesterAndEventId(Long requesterId, Long eventId);
+    @Query("""
+            SELECT pre
+            FROM ParticipationRequestEntity as pre
+            WHERE pre.event.id = :eventId
+            """)
+    List<ParticipationRequestEntity> getAllByRequesterAndEventId(Long eventId);
 
     @Query("""
             SELECT pre

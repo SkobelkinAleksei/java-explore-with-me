@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import ru.practicum.ewm.model.category.CategoryDto;
 import ru.practicum.ewm.model.user.UserShortDto;
 
 @Data
@@ -13,7 +14,7 @@ import ru.practicum.ewm.model.user.UserShortDto;
 public class EventShortDto {
     private Long id;
     private String annotation;
-    private String category;
+    private CategoryDto category;
     private String eventDate;
     private UserShortDto initiator;
     private Boolean paid;

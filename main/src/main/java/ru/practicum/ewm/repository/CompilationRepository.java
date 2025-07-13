@@ -17,7 +17,7 @@ public interface CompilationRepository extends JpaRepository<CompilationEntity, 
     @Query("""
             SELECT ce
             FROM CompilationEntity as ce
-            WHERE ce.pinned = :pinned
+            WHERE ce.pinned = true
             """)
     List<CompilationEntity> findAllPinned(Boolean pinned, PageRequest pageRequest);
 

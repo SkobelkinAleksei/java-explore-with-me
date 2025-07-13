@@ -63,14 +63,13 @@ public class ParticipationRequestService {
         }
 
         ParticipationRequestEntity participationEntity = ParticipationRequestMapper.toParticipationEntity(
-                        eventEntity,
-                        userEntity
-                );
+                eventEntity,
+                userEntity
+        );
 
         if (!eventEntity.getRequestModeration() || eventEntity.getParticipantLimit() == 0) {
             participationEntity.setStatus(State.CONFIRMED);
         }
-
         ParticipationRequestEntity saved = requestRepository.save(participationEntity);
         return ParticipationRequestMapper.toParticipationDto(saved);
     }
@@ -103,10 +102,14 @@ public class ParticipationRequestService {
         if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
             throw new IllegalArgumentException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
-        List<ParticipationRequestDto> allByRequesterAndEventId =
-                requestRepository.getAllByRequesterAndEventId(userId, eventId);
+        List<ParticipationRequestEntity> allByRequesterAndEventId =
+                requestRepository.getAllByRequesterAndEventId(eventId);
 
-        return allByRequesterAndEventId.isEmpty() ? Collections.emptyList() : allByRequesterAndEventId;
+        return allByRequesterAndEventId.isEmpty()
+                ? Collections.emptyList()
+                : allByRequesterAndEventId.stream()
+                .map(ParticipationRequestMapper::toParticipationDto)
+                .toList();
     }
 
     @Transactional
