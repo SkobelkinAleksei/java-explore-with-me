@@ -20,11 +20,4 @@ public interface LocationRepository extends JpaRepository<LocationEntity, Long> 
             WHERE l.lat = :lat AND l.lon = :lon
             """)
     LocationEntity findByLatAndLon(Float lat, Float lon);
-
-    @Query("""
-            SELECT l.id
-            FROM LocationEntity as l
-            WHERE l.lat = :lat AND l.lon = :lon
-            """)
-    Long findEntityIdByLatAndLon(Float lat, Float lon);
 }

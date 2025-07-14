@@ -150,8 +150,8 @@ public class EventService {
 
                             Integer countOfConfirmedRequests =
                                     participationRequestRepository.findCountOfConfirmedRequests(eventEntity.getId(), CONFIRMED);
-
                             eventEntity.setConfirmedRequests(eventEntity.getConfirmedRequests() + countOfConfirmedRequests);
+
                             Long hits = getHits(request, eventEntity);
                             return EventMapper.toShortEventDto(
                                     eventEntity,
@@ -202,7 +202,6 @@ public class EventService {
 
         return getEventFullDto(request, eventEntity);
     }
-
 
 
     @Transactional
@@ -396,13 +395,29 @@ public class EventService {
         if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
             throw new ForbiddenException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
-        if (nonNull(updateEventUserRequest.getAnnotation())) {
+        if (nonNull(updateEventUserRequest.getAnnotation()))
             eventEntity.setAnnotation(updateEventUserRequest.getAnnotation());
-        }
+
+        if (nonNull(updateEventUserRequest.getTitle()))
+            eventEntity.setTitle(updateEventUserRequest.getTitle());
+
+        if (nonNull(updateEventUserRequest.getDescription()))
+            eventEntity.setDescription(updateEventUserRequest.getDescription());
+
+        if (nonNull(updateEventUserRequest.getPaid()))
+            eventEntity.setPaid(updateEventUserRequest.getPaid());
+
+        if (nonNull(updateEventUserRequest.getParticipantLimit()))
+            eventEntity.setParticipantLimit(updateEventUserRequest.getParticipantLimit());
+
+        if (nonNull(updateEventUserRequest.getRequestModeration()))
+            eventEntity.setRequestModeration(updateEventUserRequest.getRequestModeration());
 
         if (nonNull(updateEventUserRequest.getEventDate())) {
             isCorrectDate(updateEventUserRequest.getEventDate());
-            eventEntity.setEventDate(LocalDateTime.parse(updateEventUserRequest.getEventDate(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            eventEntity.setEventDate(
+                    LocalDateTime.parse(updateEventUserRequest.getEventDate(),
+                            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
 
         if (nonNull(updateEventUserRequest.getLocation())
@@ -417,18 +432,6 @@ public class EventService {
             eventEntity.setLocation(location);
         }
 
-        if (nonNull(updateEventUserRequest.getDescription()))
-            eventEntity.setDescription(updateEventUserRequest.getDescription());
-
-        if (nonNull(updateEventUserRequest.getPaid()))
-            eventEntity.setPaid(updateEventUserRequest.getPaid());
-
-        if (nonNull(updateEventUserRequest.getParticipantLimit()))
-            eventEntity.setParticipantLimit(updateEventUserRequest.getParticipantLimit());
-
-        if (nonNull(updateEventUserRequest.getRequestModeration()))
-            eventEntity.setRequestModeration(updateEventUserRequest.getRequestModeration());
-
         if (nonNull(updateEventUserRequest.getStateAction())) {
             StateActionPrivate.isCorrectState(updateEventUserRequest.getStateAction());
             if (updateEventUserRequest.getStateAction().equals(StateActionPrivate.SEND_TO_REVIEW.getDescription())
@@ -438,9 +441,6 @@ public class EventService {
                 eventEntity.setState(CANCELED);
             }
         }
-
-        if (nonNull(updateEventUserRequest.getTitle()))
-            eventEntity.setTitle(updateEventUserRequest.getTitle());
 
         EventEntity savedEntity = eventRepository.save(eventEntity);
         Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
@@ -497,7 +497,6 @@ public class EventService {
             Boolean onlyAvailable,
             String sort
     ) {
-        Specification<EventEntity> specification = Specification.where(null);
 
         return Specification.where((root, query, criteriaBuilder) -> {
             Predicate predicate = criteriaBuilder.conjunction();
@@ -607,7 +606,7 @@ public class EventService {
         );
     }
 
-    private Long getHits(HttpServletRequest request, EventEntity eventEntity) {
+    protected Long getHits(HttpServletRequest request, EventEntity eventEntity) {
         List<ViewStats> viewStats = getViewStats(request, eventEntity);
         Long hits = 0L;
         if (nonNull(viewStats)) {

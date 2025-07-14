@@ -18,14 +18,12 @@ import ru.practicum.ewm.model.complitation.UpdateCompilationRequest;
 import ru.practicum.ewm.model.event.EventEntity;
 import ru.practicum.ewm.model.event.EventShortDto;
 import ru.practicum.ewm.model.user.UserEntity;
-import ru.practicum.ewm.model.user.UserShortDto;
 import ru.practicum.ewm.repository.CompilationRepository;
 import ru.practicum.ewm.repository.EventRepository;
 import ru.practicum.ewm.repository.ParticipationRequestRepository;
 import ru.practicum.ewm.repository.UserRepository;
 import ru.practicum.ewm.utils.DefaultMessagesForException;
 import ru.practicum.ewm.utils.EventServiceHelper;
-import ru.practicum.statsdto.ViewStats;
 
 import java.util.*;
 
@@ -43,6 +41,7 @@ public class CompilationService {
     private final UserRepository userRepository;
 
     private final EventServiceHelper eventServiceHelper;
+    private final EventService eventService;
 
     @Transactional(readOnly = true)
     public CompilationDto getCompilationById(Long compId, HttpServletRequest request) throws NumberFormatException {
@@ -56,11 +55,7 @@ public class CompilationService {
                 .map(eventEntity -> {
                     Integer countOfConfirmedRequests =
                             participationRequestRepository.findCountOfConfirmedRequests(eventEntity.getId(), CONFIRMED);
-                    List<ViewStats> viewStats = eventServiceHelper.getViewStats(request, eventEntity);
-                    Long hits = 0L;
-                    if (nonNull(viewStats)) {
-                        if (!viewStats.isEmpty()) hits = viewStats.getFirst().getHits();
-                    }
+                    Long hits = eventService.getHits(request, eventEntity);
                     eventEntity.setConfirmedRequests(countOfConfirmedRequests);
                     return EventMapper.toShortEventDto(
                             eventEntity,
@@ -140,7 +135,6 @@ public class CompilationService {
             compilationEntity.setEvents(oldEvents);
         }
 
-
         if (nonNull(compilationRequest.getPinned())) {
             compilationEntity.setPinned(compilationRequest.getPinned());
         }
@@ -150,6 +144,7 @@ public class CompilationService {
         }
         CompilationEntity saved = compilationRepository.save(compilationEntity);
         log.info("Изменённая подборка {}", saved);
+
         List<EventShortDto> eventShortDtos = getEventShortDtos(saved.getEvents());
         return CompilationMapper.toDto(saved, eventShortDtos);
     }
@@ -200,13 +195,8 @@ public class CompilationService {
                             .map(eventEntity -> {
                                 Integer countOfConfirmedRequests =
                                         participationRequestRepository.findCountOfConfirmedRequests(eventEntity.getId(), CONFIRMED);
-                                List<ViewStats> viewStats = eventServiceHelper.getViewStats(request, eventEntity);
-                                Long hits = 0L;
-                                if (nonNull(viewStats)) {
-                                    if (!viewStats.isEmpty()) hits = viewStats.getFirst().getHits();
-                                }
+                                Long hits = eventService.getHits(request, eventEntity);
                                 eventEntity.setConfirmedRequests(countOfConfirmedRequests);
-                                UserShortDto userShortDto = UserMapper.toUserShortDto(eventEntity.getInitiator());
                                 return EventMapper.toShortEventDto(eventEntity, hits, countOfConfirmedRequests);
                             }).toList();
                     return CompilationMapper.toDto(compilationEntity, eventShortDtos);

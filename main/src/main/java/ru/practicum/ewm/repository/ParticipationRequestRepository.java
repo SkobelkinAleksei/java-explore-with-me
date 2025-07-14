@@ -33,14 +33,6 @@ public interface ParticipationRequestRepository extends JpaRepository<Participat
     @Query("""
             SELECT pre
             FROM ParticipationRequestEntity as pre
-            WHERE pre.requester.id = :requesterId
-            AND pre.event.id = :eventId
-            """)
-    Optional<ParticipationRequestEntity> isExists(Long requesterId, Long eventId);
-
-    @Query("""
-            SELECT pre
-            FROM ParticipationRequestEntity as pre
             WHERE pre.requester.id = :id
             """)
     List<ParticipationRequestEntity> getAllByRequesterId(@Param("id") Long requesterId);
@@ -63,13 +55,6 @@ public interface ParticipationRequestRepository extends JpaRepository<Participat
                                                                      Long eventId,
                                                                      State status
     );
-
-    @Query("""
-            SELECT COUNT(pre.id)
-            FROM ParticipationRequestEntity as pre
-            WHERE pre.event.id = :eventId
-            """)
-    Long findCountOfRequests(Long eventId);
 
     @Query("""
             SELECT COUNT(pre.id)

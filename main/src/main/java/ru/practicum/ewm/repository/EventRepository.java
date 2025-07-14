@@ -5,11 +5,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.*;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import ru.practicum.ewm.model.event.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -24,13 +22,6 @@ public interface EventRepository extends JpaRepository<EventEntity, Long>, JpaSp
             AND ee.state = :state
             """)
     Optional<EventEntity> findPublishedEventById(Long id, State state);
-
-    @Query("""
-            SELECT ee
-            FROM EventEntity as ee
-            WHERE ee.initiator.id IN :userId
-            """)
-    List<EventEntity> findAllEventEntitiesByUserIds(List<Long> userId);
 
     @Query("""
             SELECT (COUNT(ee.id) > 0)
@@ -72,62 +63,9 @@ public interface EventRepository extends JpaRepository<EventEntity, Long>, JpaSp
     @Query("""
                 SELECT ee
                 FROM EventEntity as ee
-            """)
-    Set<EventEntity> findAllByAdmin(PageRequest pageRequest);
-
-
-    @EntityGraph(attributePaths = {"initiator", "category", "location"})
-    @Query("""
-                SELECT ee
-                FROM EventEntity as ee
                 WHERE ee.id = :eventId
             """)
     Optional<EventEntity> findEventEntityById(Long eventId);
-
-    @Modifying
-    @Query("""
-            UPDATE EventEntity ee
-            SET
-                ee.annotation = :#{#updateEventUserRequest.annotation},
-                ee.category.id = :#{#updateEventUserRequest.category},
-                ee.description = :#{#updateEventUserRequest.description},
-                ee.eventDate = :eventDate,
-                ee.location.id = :locationId,
-                ee.paid = :#{#updateEventUserRequest.paid},
-                ee.participantLimit = :#{#updateEventUserRequest.participantLimit},
-                ee.requestModeration = :#{#updateEventUserRequest.requestModeration},
-                ee.state = :stateAction,
-                ee.title = :#{#updateEventUserRequest.title}
-            WHERE ee.id = :eventId
-            """)
-    int updateEventEntity(@Param("eventId") Long eventId,
-                          @Param("updateEventUserRequest") UpdateEventUserRequest updateEventUserRequest,
-                          LocalDateTime eventDate,
-                          Long locationId,
-                          State stateAction);
-
-    @Modifying
-    @Query("""
-            UPDATE EventEntity ee
-            SET
-                ee.annotation = :#{#updateEventAdminRequest.annotation},
-                ee.category.id = :#{#updateEventAdminRequest.category},
-                ee.description = :#{#updateEventAdminRequest.description},
-                ee.eventDate = :eventDate,
-                ee.location.id = :locationId,
-                ee.paid = :#{#updateEventAdminRequest.paid},
-                ee.participantLimit = :#{#updateEventAdminRequest.participantLimit},
-                ee.requestModeration = :#{#updateEventAdminRequest.requestModeration},
-                ee.state = :stateAction,
-                ee.title = :#{#updateEventAdminRequest.title}
-            WHERE ee.id = :eventId
-            """)
-    int updateEventEntity(@Param("eventId") Long eventId,
-                          @Param("updateEventAdminRequest") UpdateEventAdminRequest updateEventAdminRequest,
-                          LocalDateTime eventDate,
-                          Long locationId,
-                          State stateAction
-    );
 
     @Query("""
             SELECT (COUNT(ee.id) > 0)
@@ -144,10 +82,6 @@ public interface EventRepository extends JpaRepository<EventEntity, Long>, JpaSp
             """)
     Page<EventEntity> findAllWithAvailableLimit(Specification<EventEntity> specification, Pageable pageable);
 
-//    @Query("""
-//            SELECT ee
-//            FROM EventEntity as ee
-//            """)
     Page<EventEntity> findAll(Specification<EventEntity> specification, Pageable pageable);
 
 }
