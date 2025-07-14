@@ -19,6 +19,9 @@ import ru.practicum.statsdto.ViewStats;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+
 @Slf4j
 @Component
 @AllArgsConstructor
@@ -67,16 +70,30 @@ public class EventServiceHelper {
             Integer from,
             Integer size
     ) {
+        if (nonNull(from)) {
+            if (from != 0) from = 0;
+        } else from = 0;
+        if (nonNull(size)) {
+            if (size != 10) size = 10;
+        } else size = 10;
+
         return PageRequest.of(
                 from,
-                size <= 10 ? size : 10
+                size
         );
     }
 
     public PageRequest getPageRequestWithSort(Integer from, Integer size, String sort) {
+        if (nonNull(from)) {
+            if (from != 0) from = 0;
+        } else from = 0;
+        if (nonNull(size)) {
+            if (size != 10) size = 10;
+        } else size = 10;
+
         return PageRequest.of(
                 from,
-                size <= 10 ? size : 10,
+                size > 10 ? 10 : size,
                 Sort.by(sort).ascending()
         );
     }

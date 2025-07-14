@@ -167,17 +167,23 @@ public class ParticipationRequestService {
     }
 
     @Transactional
-    public ParticipationRequestDto cancelRequest(Long userId, Long requestId) throws NumberFormatException {
-        if (!userRepository.isUserExistsById(userId))
+    public ParticipationRequestDto cancelRequest(
+            Long requestId,
+            Long userId
+    ) throws NumberFormatException {
+        if (!userRepository.isUserExistsById(requestId))
             throw new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND);
 
+        if (!requestRepository.isParticipationRequestExistsByUserIdAndRequestId(requestId, userId))
+            throw new EntityNotFoundException(
+                    DefaultMessagesForException.REQUEST_NOT_FOUND_FOR_USER
+            );
+
         ParticipationRequestEntity participationRequestEntity =
-                requestRepository.findById(requestId).orElseThrow(() ->
+                requestRepository.findByRequesterId(requestId).orElseThrow(() ->
                         new EntityNotFoundException("Заявка не была найдена.")
                 );
 
-        if (!requestRepository.isParticipationRequestExistsByUserIdAndRequestId(userId, requestId))
-            throw new EntityNotFoundException(DefaultMessagesForException.REQUEST_NOT_FOUND_FOR_USER);
 
         participationRequestEntity.setStatus(State.CANCELED);
 

@@ -156,7 +156,8 @@ public class EventService {
             HttpServletRequest request
     ) throws NumberFormatException {
         EventEntity eventEntity = eventRepository.findPublishedEventById(eventId, PUBLISHED)
-                .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.EVENT_NOT_FOUND));
+                .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.EVENT_NOT_FOUND)
+                );
 
         EndpointHitDto endpointHitDto = new EndpointHitDto(
                 APP,
@@ -203,7 +204,7 @@ public class EventService {
         List<ViewStats> viewStats = getViewStats(request, eventEntity);
 
         Long hits = 0L;
-        if (nonNull(viewStats)) {
+        if(nonNull(viewStats)) {
             if (!viewStats.isEmpty()) hits = viewStats.getFirst().getHits();
         }
 
@@ -249,7 +250,7 @@ public class EventService {
         List<EventEntity> filteredEvents = eventRepository.findAll(
                 specification,
                 eventServiceHelper.getPageRequest(from, size)
-        ).getContent();
+        ).getContent().stream().sorted(Comparator.comparing(EventEntity::getId)).toList();
 
         log.info("[DEBUG] Filtered events {}", filteredEvents);
 
@@ -415,6 +416,10 @@ public class EventService {
 
         if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
             throw new ForbiddenException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
+
+        if(nonNull(updateEventUserRequest.getAnnotation())){
+            eventEntity.setAnnotation(updateEventUserRequest.getAnnotation());
+        }
 
         if (nonNull(updateEventUserRequest.getEventDate())) {
             isCorrectDate(updateEventUserRequest.getEventDate());

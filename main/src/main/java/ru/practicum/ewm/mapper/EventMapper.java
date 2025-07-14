@@ -52,7 +52,6 @@ public class EventMapper {
             Long hits,
             Integer confirmedRequests
     ) {
-//        State state = eventEntity.getRequestModeration() ? State.PENDING : eventEntity.getState();
 
         return EventFullDto.builder()
                 .id(eventEntity.getId())

@@ -30,7 +30,9 @@ public class UserPrivateController {
             @RequestBody @Valid NewEventDto newEventDto
     ) {
         log.info("Поступил запрос на создание нового события от пользователя с id: {}", userId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(eventService.createEvent(userId, newEventDto));
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                eventService.createEvent(userId, newEventDto)
+        );
     }
 
     @GetMapping

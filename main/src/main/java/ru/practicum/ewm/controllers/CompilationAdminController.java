@@ -19,7 +19,9 @@ public class CompilationAdminController {
     private final CompilationService compilationService;
 
     @PostMapping
-    public ResponseEntity<CompilationDto> saveCompilation(@RequestBody @Valid NewCompilationDto compilationDto) {
+    public ResponseEntity<CompilationDto> saveCompilation(
+            @RequestBody @Valid NewCompilationDto compilationDto
+    ) {
         log.info("Поступил запрос на создание новой подборки");
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 compilationService.saveCompilation(compilationDto)

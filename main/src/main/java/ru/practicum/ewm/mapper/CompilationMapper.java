@@ -39,7 +39,7 @@ public class CompilationMapper {
             Set<EventEntity> eventEntities
     ) {
         return CompilationEntity.builder()
-                .events(isNull(updateCompilationRequest.getEventsId())
+                .events(isNull(updateCompilationRequest.getEvents())
                         ? currentEntity.getEvents()
                         : eventEntities)
                 .pinned(!isNull(updateCompilationRequest.getPinned())

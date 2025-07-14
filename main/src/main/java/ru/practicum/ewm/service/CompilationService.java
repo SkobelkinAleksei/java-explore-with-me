@@ -8,6 +8,7 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.ewm.exeption.ForbiddenException;
 import ru.practicum.ewm.mapper.CompilationMapper;
 import ru.practicum.ewm.mapper.EventMapper;
 import ru.practicum.ewm.mapper.UserMapper;
@@ -25,6 +26,7 @@ import ru.practicum.ewm.repository.ParticipationRequestRepository;
 import ru.practicum.ewm.repository.UserRepository;
 import ru.practicum.ewm.utils.DefaultMessagesForException;
 import ru.practicum.ewm.utils.EventServiceHelper;
+import ru.practicum.statsclient.StatsClient;
 import ru.practicum.statsdto.ViewStats;
 
 import java.util.*;
@@ -128,8 +130,9 @@ public class CompilationService {
                 () -> new EntityNotFoundException("Подборка не была найдена.")
         );
         log.debug("Найдена подборка: {}", compilationEntity);
+
         Set<EventEntity> oldEvents = compilationEntity.getEvents();
-        List<Long> eventsId = compilationRequest.getEventsId();
+        List<Long> eventsId = compilationRequest.getEvents();
 
         if (nonNull(eventsId) && !eventsId.isEmpty()) {
             eventsId.forEach(eventId -> {
@@ -150,18 +153,24 @@ public class CompilationService {
             compilationEntity.setTitle(compilationRequest.getTitle());
         }
         CompilationEntity saved = compilationRepository.save(compilationEntity);
+        log.info("Изменённая подборка {}", saved);
         List<EventShortDto> eventShortDtos = getEventShortDtos(saved.getEvents());
         return CompilationMapper.toDto(saved, eventShortDtos);
     }
 
     @Transactional(readOnly = true)
-    public List<CompilationDto> findAll(Boolean pinned, Integer from, Integer size, HttpServletRequest request) {
+    public List<CompilationDto> findAll(
+            Boolean pinned,
+            Integer from,
+            Integer size,
+            HttpServletRequest request
+    ) {
         PageRequest pageRequest = eventServiceHelper.getPageRequest(from, size);
+        log.info("Запрос на получение подборок, входные параметры: {}, {}, {}", pageRequest, from, size);
 
         if (nonNull(pinned)) {
-                List<CompilationEntity> allPinned = compilationRepository.findAllPinned(pinned, pageRequest)
-                        .stream()
-                        .sorted(Comparator.comparing(CompilationEntity::getId).reversed()).collect(Collectors.toList());
+                List<CompilationEntity> allPinned = compilationRepository.findAllPinned(pinned, pageRequest);
+                log.info("Полученный список подборок: {}, его размер = {}", allPinned, allPinned.size());
                 return getCompilationDtos(allPinned, request);
         }
 

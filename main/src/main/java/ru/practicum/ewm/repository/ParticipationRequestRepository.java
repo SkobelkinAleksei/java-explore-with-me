@@ -1,5 +1,6 @@
 package ru.practicum.ewm.repository;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,6 +21,14 @@ public interface ParticipationRequestRepository extends JpaRepository<Participat
             AND pre.event.id = :eventId
             """)
     boolean isExistsByRequesterAndEventId(Long requesterId, Long eventId);
+
+    @EntityGraph(attributePaths = {"event"})
+    @Query("""
+            SELECT pre
+            FROM ParticipationRequestEntity as pre
+            WHERE pre.requester.id = :requesterId            
+            """)
+    Optional<ParticipationRequestEntity> findByRequesterId(Long requesterId);
 
     @Query("""
             SELECT pre
