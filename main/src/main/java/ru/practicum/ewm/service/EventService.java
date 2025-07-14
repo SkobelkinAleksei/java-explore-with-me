@@ -198,13 +198,10 @@ public class EventService {
         if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
             throw new ForbiddenException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
-//        if (!eventEntity.getState().equals(PUBLISHED))
-//            throw new ForbiddenException("Событие не было опубликовано.");
-
         List<ViewStats> viewStats = getViewStats(request, eventEntity);
 
         Long hits = 0L;
-        if(nonNull(viewStats)) {
+        if (nonNull(viewStats)) {
             if (!viewStats.isEmpty()) hits = viewStats.getFirst().getHits();
         }
 
@@ -417,7 +414,7 @@ public class EventService {
         if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
             throw new ForbiddenException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
-        if(nonNull(updateEventUserRequest.getAnnotation())){
+        if (nonNull(updateEventUserRequest.getAnnotation())) {
             eventEntity.setAnnotation(updateEventUserRequest.getAnnotation());
         }
 

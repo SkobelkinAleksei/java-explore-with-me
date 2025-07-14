@@ -26,7 +26,7 @@ public interface ParticipationRequestRepository extends JpaRepository<Participat
     @Query("""
             SELECT pre
             FROM ParticipationRequestEntity as pre
-            WHERE pre.requester.id = :requesterId            
+            WHERE pre.requester.id = :requesterId
             """)
     Optional<ParticipationRequestEntity> findByRequesterId(Long requesterId);
 

@@ -19,7 +19,6 @@ import ru.practicum.statsdto.ViewStats;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @Slf4j

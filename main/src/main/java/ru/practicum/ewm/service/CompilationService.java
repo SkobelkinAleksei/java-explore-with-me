@@ -8,7 +8,6 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.ewm.exeption.ForbiddenException;
 import ru.practicum.ewm.mapper.CompilationMapper;
 import ru.practicum.ewm.mapper.EventMapper;
 import ru.practicum.ewm.mapper.UserMapper;
@@ -26,11 +25,9 @@ import ru.practicum.ewm.repository.ParticipationRequestRepository;
 import ru.practicum.ewm.repository.UserRepository;
 import ru.practicum.ewm.utils.DefaultMessagesForException;
 import ru.practicum.ewm.utils.EventServiceHelper;
-import ru.practicum.statsclient.StatsClient;
 import ru.practicum.statsdto.ViewStats;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -46,7 +43,6 @@ public class CompilationService {
     private final UserRepository userRepository;
 
     private final EventServiceHelper eventServiceHelper;
-//    private final StatsClient statsClient;
 
     @Transactional(readOnly = true)
     public CompilationDto getCompilationById(Long compId, HttpServletRequest request) throws NumberFormatException {
