@@ -36,10 +36,12 @@ public class StatsClient {
         }
     }
 
-    public ResponseEntity<Object> getStats(LocalDateTime start,
-                                           LocalDateTime end,
-                                           List<String> uris,
-                                           Boolean unique) {
+    public ResponseEntity<Object> getStats(
+            LocalDateTime start,
+            LocalDateTime end,
+            List<String> uris,
+            Boolean unique
+    ) {
         StringBuilder urlResult = new StringBuilder(url.concat("/stats?"));
 
         for (String str : uris) {

@@ -110,14 +110,27 @@ public class EventService {
 
         return pageEvents.isEmpty() ? Collections.emptyList() : pageEvents.stream()
                 .map(eventEntity -> {
+
                     Integer countOfConfirmedRequests =
                             participationRequestRepository.findCountOfConfirmedRequests(eventEntity.getId(), CONFIRMED);
+
+                    // Мы кол-во просмотров получаем здесь, он подгружает их, каждое сохранение hit, + 1 просмотр
                     List<ViewStats> viewStats = getViewStats(request, eventEntity);
                     Long hits = 0L;
                     if (nonNull(viewStats)) {
-                        if (!viewStats.isEmpty()) hits = viewStats.getFirst().getHits();
+                        if (!viewStats.isEmpty()){
+                            hits = viewStats.getFirst().getHits();
+                        }
                     }
                     eventEntity.setConfirmedRequests(countOfConfirmedRequests);
+                    EndpointHitDto endpointHitDto = new EndpointHitDto(
+                            APP,
+                            request.getRequestURI(),
+                            request.getRemoteAddr(),
+                            LocalDateTime.now()
+                    );
+                    // Да, но тз говорит, что при вызове GET надо увеличить, а мы их просто сохраняем
+                    statsClient.saveHit(endpointHitDto);
 
                     return EventMapper.toShortEventDto(
                             eventEntity,

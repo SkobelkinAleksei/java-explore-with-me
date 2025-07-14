@@ -15,7 +15,7 @@ public interface StatsRepository extends JpaRepository<EndpointHit, Long> {
     @Query("""
         SELECT new ru.practicum.statsdto.ViewStats(eh.app, eh.uri, COUNT(eh.uri))
         FROM EndpointHit as eh
-        WHERE eh.timestamp BETWEEN ?1 AND ?2
+        WHERE eh.created BETWEEN ?1 AND ?2
         GROUP BY eh.app, eh.uri
         ORDER BY COUNT(eh.uri) DESC
      """)
@@ -24,7 +24,7 @@ public interface StatsRepository extends JpaRepository<EndpointHit, Long> {
     @Query("""
         SELECT new ru.practicum.statsdto.ViewStats(eh.app, eh.uri, COUNT(DISTINCT eh.ip))
         FROM EndpointHit as eh
-        WHERE eh.uri IN (?1) AND eh.timestamp BETWEEN ?2 AND ?3
+        WHERE eh.uri IN (?1) AND eh.created BETWEEN ?2 AND ?3
         GROUP BY eh.app, eh.uri
         ORDER BY COUNT(DISTINCT eh.ip) DESC
      """)
@@ -33,7 +33,7 @@ public interface StatsRepository extends JpaRepository<EndpointHit, Long> {
     @Query("""
         SELECT new ru.practicum.statsdto.ViewStats(eh.app, eh.uri, COUNT(DISTINCT eh.ip))
         FROM EndpointHit as eh
-        WHERE eh.timestamp BETWEEN ?1 AND ?2
+        WHERE eh.created BETWEEN ?1 AND ?2
         GROUP BY eh.app, eh.uri
         ORDER BY COUNT(DISTINCT eh.ip) DESC
      """)
@@ -42,7 +42,7 @@ public interface StatsRepository extends JpaRepository<EndpointHit, Long> {
     @Query("""
         SELECT new ru.practicum.statsdto.ViewStats(eh.app, eh.uri, COUNT(eh.uri))
         FROM EndpointHit as eh
-        WHERE eh.uri IN (?1) AND eh.timestamp BETWEEN ?2 AND ?3
+        WHERE eh.uri IN (?1) AND eh.created BETWEEN ?2 AND ?3
         GROUP BY eh.app, eh.uri
         ORDER BY COUNT(eh.uri) DESC
      """)

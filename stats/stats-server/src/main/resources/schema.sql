@@ -6,5 +6,5 @@ CREATE TABLE IF NOT EXISTS hits
     app       VARCHAR(255),
     uri       VARCHAR(255),
     ip        VARCHAR(55),
-    timestamp TIMESTAMP
+    created TIMESTAMP
 );
