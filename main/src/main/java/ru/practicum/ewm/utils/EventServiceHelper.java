@@ -9,7 +9,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.model.event.EventEntity;
 import ru.practicum.ewm.model.location.LocationEntity;
 import ru.practicum.ewm.repository.LocationRepository;
@@ -27,18 +26,6 @@ import static java.util.Objects.nonNull;
 public class EventServiceHelper {
     private final LocationRepository locationRepository;
     private final StatsClient statsClient;
-
-    @Transactional
-    public LocationEntity checkLocation(LocationEntity locationEntity) {
-        Float lat = locationEntity.getLat();
-        Float lon = locationEntity.getLon();
-
-        if (locationRepository.isExistsLocation(lat, lon)) {
-            return locationRepository.findByLatAndLon(lat, lon);
-        }
-
-        return locationRepository.save(locationEntity);
-    }
 
     public List<ViewStats> getViewStats(HttpServletRequest request, EventEntity eventEntity) {
         log.info("[DEBUG] Get view stats for {}, {}", eventEntity, request.getRequestURI());

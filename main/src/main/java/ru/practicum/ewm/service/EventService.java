@@ -177,22 +177,7 @@ public class EventService {
                 .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.EVENT_NOT_FOUND)
                 );
 
-        EndpointHitDto endpointHitDto = new EndpointHitDto(
-                APP,
-                request.getRequestURI(),
-                request.getRemoteAddr(),
-                LocalDateTime.now()
-        );
-        statsClient.saveHit(endpointHitDto);
-
-        Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
-        Long hits = getHits(request, eventEntity);
-
-        return EventMapper.toEventFullDto(
-                eventEntity,
-                hits,
-                confirmedRequests
-        );
+        return getEventFullDto(request, eventEntity);
     }
 
     @Transactional(readOnly = true)
@@ -202,7 +187,7 @@ public class EventService {
             HttpServletRequest request
     ) throws NumberFormatException {
 
-        UserEntity userEntity = userRepository.findById(userId)
+        userRepository.findById(userId)
                 .orElseThrow(() ->
                         new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND)
                 );
@@ -215,23 +200,10 @@ public class EventService {
         if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
             throw new ForbiddenException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
-        EndpointHitDto endpointHitDto = new EndpointHitDto(
-                APP,
-                request.getRequestURI(),
-                request.getRemoteAddr(),
-                LocalDateTime.now()
-        );
-
-        statsClient.saveHit(endpointHitDto);
-
-        Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
-        Long hits = getHits(request, eventEntity);
-        return EventMapper.toEventFullDto(
-                eventEntity,
-                hits,
-                confirmedRequests
-        );
+        return getEventFullDto(request, eventEntity);
     }
+
+
 
     @Transactional
     public List<EventFullDto> getEventsByAdmin(
@@ -614,6 +586,25 @@ public class EventService {
                 responseStats.getBody(),
                 new TypeReference<>() {
                 });
+    }
+
+    private EventFullDto getEventFullDto(HttpServletRequest request, EventEntity eventEntity) {
+        EndpointHitDto endpointHitDto = new EndpointHitDto(
+                APP,
+                request.getRequestURI(),
+                request.getRemoteAddr(),
+                LocalDateTime.now()
+        );
+
+        statsClient.saveHit(endpointHitDto);
+
+        Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
+        Long hits = getHits(request, eventEntity);
+        return EventMapper.toEventFullDto(
+                eventEntity,
+                hits,
+                confirmedRequests
+        );
     }
 
     private Long getHits(HttpServletRequest request, EventEntity eventEntity) {

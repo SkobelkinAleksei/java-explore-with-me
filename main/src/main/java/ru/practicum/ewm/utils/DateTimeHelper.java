@@ -12,4 +12,8 @@ public class DateTimeHelper {
     public LocalDateTime fromStringToLocalDateTime(String date) {
         return LocalDateTime.parse(date, formatter);
     }
+
+    public String fromDateToLocalDateTime(LocalDateTime date) {
+        return date.format(formatter);
+    }
 }

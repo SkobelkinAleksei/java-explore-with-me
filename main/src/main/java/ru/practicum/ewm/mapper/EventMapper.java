@@ -9,7 +9,6 @@ import ru.practicum.ewm.model.user.UserShortDto;
 import ru.practicum.ewm.utils.DateTimeHelper;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -22,7 +21,7 @@ public class EventMapper {
                 .id(event.getId())
                 .annotation(event.getAnnotation())
                 .category(CategoryMapper.toDto(event.getCategory()))
-                .eventDate(event.getEventDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+                .eventDate(DateTimeHelper.fromDateToLocalDateTime(event.getEventDate()))
                 .initiator(userShortDto)
                 .paid(event.getPaid())
                 .title(event.getTitle())
@@ -38,7 +37,7 @@ public class EventMapper {
                 .id(event.getId())
                 .annotation(event.getAnnotation())
                 .category(CategoryMapper.toDto(event.getCategory()))
-                .eventDate(event.getEventDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+                .eventDate(DateTimeHelper.fromDateToLocalDateTime(event.getEventDate()))
                 .initiator(UserMapper.toUserShortDto(event.getInitiator()))
                 .views(hits)
                 .confirmedRequests(countOfConfirmedRequests)
@@ -59,9 +58,9 @@ public class EventMapper {
                 .initiator(UserMapper.toUserShortDto(eventEntity.getInitiator()))
                 .category(CategoryMapper.toDto(eventEntity.getCategory()))
                 .location(LocationMapper.toLocationDto(eventEntity.getLocation()))
-                .eventDate(eventEntity.getEventDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
-                .createdOn(eventEntity.getCreatedOn().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
-                .publishedOn(eventEntity.getCreatedOn().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+                .eventDate(DateTimeHelper.fromDateToLocalDateTime(eventEntity.getEventDate()))
+                .createdOn(DateTimeHelper.fromDateToLocalDateTime(eventEntity.getCreatedOn()))
+                .publishedOn(DateTimeHelper.fromDateToLocalDateTime(eventEntity.getCreatedOn()))
                 .state(eventEntity.getState().getName())
                 .paid(eventEntity.getPaid())
                 .requestModeration(eventEntity.getRequestModeration())
