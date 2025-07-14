@@ -14,6 +14,8 @@ import java.time.DateTimeException;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static java.util.Objects.nonNull;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -23,7 +25,6 @@ public class StatsService {
     @Transactional
     public EndpointHitDto saveHits(EndpointHitDto endpointHitDto) {
         EndpointHit endpointHit = statsRepository.save(EndpointHitMapper.toEntity(endpointHitDto));
-
         return EndpointHitMapper.toDto(endpointHit);
     }
 
@@ -38,7 +39,7 @@ public class StatsService {
         if (isDataCorrect(start, end)) throw new DateTimeException("Неверный формат даты");
         if (unique) {
             log.info("Запрос на получение уникальных id");
-            if (uris != null) {
+            if (nonNull(uris)) {
                 List<ViewStats> uniqueWithUrisStats = statsRepository.findUniqueWithUrisStats(uris, start, end);
                 log.info("Получили список уникальных просмотров {}", uniqueWithUrisStats);
                 return uniqueWithUrisStats;
@@ -48,7 +49,7 @@ public class StatsService {
 
         } else {
             log.info("Запрос на получение не уникальных ip");
-            if (uris != null) {
+            if (nonNull(uris)) {
                 List<ViewStats> noUniqueWithUrisStats = statsRepository.findNoUniqueWithUrisStats(uris, start, end);
                 log.info("Получили список не уникальных просмотров {}", noUniqueWithUrisStats);
                 return noUniqueWithUrisStats;
@@ -59,8 +60,10 @@ public class StatsService {
         }
     }
 
-    private Boolean isDataCorrect(LocalDateTime start,
-                                  LocalDateTime end) {
+    private Boolean isDataCorrect(
+            LocalDateTime start,
+            LocalDateTime end
+    ) {
         return start.isAfter(end);
     }
 

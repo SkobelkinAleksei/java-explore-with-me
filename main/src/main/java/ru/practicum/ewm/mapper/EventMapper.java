@@ -30,7 +30,7 @@ public class EventMapper {
     }
 
     public EventShortDto toShortEventDto(
-            EventEntity event, UserShortDto userShortDto,
+            EventEntity event,
             Long hits,
             Integer countOfConfirmedRequests
     ) {
@@ -39,7 +39,7 @@ public class EventMapper {
                 .annotation(event.getAnnotation())
                 .category(CategoryMapper.toDto(event.getCategory()))
                 .eventDate(event.getEventDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
-                .initiator(userShortDto)
+                .initiator(UserMapper.toUserShortDto(event.getInitiator()))
                 .views(hits)
                 .confirmedRequests(countOfConfirmedRequests)
                 .paid(event.getPaid())

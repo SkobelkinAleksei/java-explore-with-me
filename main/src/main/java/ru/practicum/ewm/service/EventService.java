@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.exeption.ForbiddenException;
 import ru.practicum.ewm.mapper.EventMapper;
-import ru.practicum.ewm.mapper.UserMapper;
 import ru.practicum.ewm.model.category.CategoryEntity;
 import ru.practicum.ewm.model.event.*;
 import ru.practicum.ewm.model.location.LocationEntity;
@@ -54,7 +53,8 @@ public class EventService {
     public List<EventShortDto> getEventsByPrivateUser(
             Long userId,
             Integer from,
-            Integer size
+            Integer size,
+            HttpServletRequest request
     ) throws NumberFormatException {
         log.info("Запрос на получение событий пользователя с id: {}, from: {}, size: {}", userId, from, size);
 
@@ -68,8 +68,27 @@ public class EventService {
         );
         log.info("Найдено {} событий для пользователя с id: {}", eventEntitiesByUserId.size(), userId);
 
+        EndpointHitDto endpointHitDto = new EndpointHitDto(
+                APP,
+                request.getRequestURI(),
+                request.getRemoteAddr(),
+                LocalDateTime.now()
+        );
+        statsClient.saveHit(endpointHitDto);
+
         return eventEntitiesByUserId.isEmpty() ? Collections.emptyList() : eventEntitiesByUserId.stream()
-                .map(event -> EventMapper.toAdminShortEventDto(event, UserMapper.toUserShortDto(userEntity)))
+                .map(event -> {
+                    Integer countOfConfirmedRequests =
+                            participationRequestRepository.findCountOfConfirmedRequests(event.getId(), CONFIRMED);
+
+                    event.setConfirmedRequests(countOfConfirmedRequests);
+                    Long hits = getHits(request, event);
+                    return EventMapper.toShortEventDto(
+                            event,
+                            hits,
+                            countOfConfirmedRequests
+                    );
+                })
                 .toList();
     }
 
@@ -95,71 +114,59 @@ public class EventService {
         }
         Specification<EventEntity> specification;
         specification = getEventEntitySpecificationByUser(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort);
-        List<EventEntity> pageEvents = eventRepository
+
+        EndpointHitDto endpointHitDto = new EndpointHitDto(
+                APP,
+                request.getRequestURI(),
+                request.getRemoteAddr(),
+                LocalDateTime.now()
+        );
+        statsClient.saveHit(endpointHitDto);
+
+        List<EventShortDto> pageEvents = eventRepository
                 .findAll(specification, getPageRequest(sort, from, size))
-                .getContent();
-
-        if (nonNull(onlyAvailable)) {
-            if (onlyAvailable) {
-                pageEvents = eventRepository.findAllWithAvailableLimit(specification, getPageRequest(sort, from, size))
-                        .getContent();
-            }
-        }
-
-        return pageEvents.isEmpty() ? Collections.emptyList() : pageEvents.stream()
+                .getContent()
+                .stream()
                 .map(eventEntity -> {
 
                     Integer countOfConfirmedRequests =
                             participationRequestRepository.findCountOfConfirmedRequests(eventEntity.getId(), CONFIRMED);
 
-                    // Мы кол-во просмотров получаем здесь, он подгружает их, каждое сохранение hit, + 1 просмотр
-                    List<ViewStats> viewStats = getViewStats(request, eventEntity);
-                    Long hits = 0L;
-                    if (nonNull(viewStats)) {
-                        if (!viewStats.isEmpty()) {
-                            hits = viewStats.getFirst().getHits();
-                        }
-                    }
-                    eventEntity.setConfirmedRequests(countOfConfirmedRequests);
-                    EndpointHitDto endpointHitDto = new EndpointHitDto(
-                            APP,
-                            request.getRequestURI(),
-                            request.getRemoteAddr(),
-                            LocalDateTime.now()
-                    );
-                    // Да, но тз говорит, что при вызове GET надо увеличить, а мы их просто сохраняем
-                    statsClient.saveHit(endpointHitDto);
-
+                    eventEntity.setConfirmedRequests(eventEntity.getConfirmedRequests() + countOfConfirmedRequests);
+                    Long hits = getHits(request, eventEntity);
                     return EventMapper.toShortEventDto(
                             eventEntity,
-                            UserMapper.toUserShortDto(eventEntity.getInitiator()),
                             hits,
                             countOfConfirmedRequests
                     );
                 })
                 .toList();
-    }
 
-    private PageRequest getPageRequest(
-            String sort,
-            Integer from,
-            Integer size
-    ) {
-        String sortBy = "views";
 
-        if (nonNull(sort)) {
-            if (sort.equalsIgnoreCase("event_date")) {
-                sortBy = "eventDate";
+        if (nonNull(onlyAvailable)) {
+            if (onlyAvailable) {
+                return eventRepository.findAllWithAvailableLimit(specification, getPageRequest(sort, from, size))
+                        .getContent().stream().map(eventEntity -> {
+
+                            Integer countOfConfirmedRequests =
+                                    participationRequestRepository.findCountOfConfirmedRequests(eventEntity.getId(), CONFIRMED);
+
+                            eventEntity.setConfirmedRequests(eventEntity.getConfirmedRequests() + countOfConfirmedRequests);
+                            Long hits = getHits(request, eventEntity);
+                            return EventMapper.toShortEventDto(
+                                    eventEntity,
+                                    hits,
+                                    countOfConfirmedRequests
+                            );
+                        })
+                        .toList();
             }
-            return eventServiceHelper.getPageRequestWithSort(
-                    from,
-                    size,
-                    sortBy
-            );
-        } else {
-            return eventServiceHelper.getPageRequest(from, size);
         }
+
+        return pageEvents;
+
     }
+
 
     @Transactional(readOnly = true)
     public EventFullDto getEventByIdWithoutUser(
@@ -178,9 +185,8 @@ public class EventService {
         );
         statsClient.saveHit(endpointHitDto);
 
-        List<ViewStats> viewStats = getViewStats(request, eventEntity);
-        Long hits = viewStats.getFirst().getHits();
         Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
+        Long hits = getHits(request, eventEntity);
 
         return EventMapper.toEventFullDto(
                 eventEntity,
@@ -209,13 +215,6 @@ public class EventService {
         if (!eventRepository.isExistsByEventIdAndUserId(eventId, userId))
             throw new ForbiddenException(DefaultMessagesForException.EVENT_NOT_FOUND_FOR_USER);
 
-        List<ViewStats> viewStats = getViewStats(request, eventEntity);
-
-        Long hits = 0L;
-        if (nonNull(viewStats)) {
-            if (!viewStats.isEmpty()) hits = viewStats.getFirst().getHits();
-        }
-
         EndpointHitDto endpointHitDto = new EndpointHitDto(
                 APP,
                 request.getRequestURI(),
@@ -224,8 +223,9 @@ public class EventService {
         );
 
         statsClient.saveHit(endpointHitDto);
-        Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
 
+        Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
+        Long hits = getHits(request, eventEntity);
         return EventMapper.toEventFullDto(
                 eventEntity,
                 hits,
@@ -384,12 +384,11 @@ public class EventService {
         }
 
         EventEntity savedEvent = eventRepository.save(eventEntity);
-        List<ViewStats> viewStats = getViewStats(request, savedEvent);
-
+        Long hits = getHits(request, savedEvent);
         Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
         return EventMapper.toEventFullDto(
                 savedEvent,
-                viewStats.isEmpty() ? 0L : viewStats.getFirst().getHits(),
+                hits,
                 confirmedRequests
         );
     }
@@ -472,16 +471,8 @@ public class EventService {
             eventEntity.setTitle(updateEventUserRequest.getTitle());
 
         EventEntity savedEntity = eventRepository.save(eventEntity);
-        List<ViewStats> viewStats = getViewStats(request, savedEntity);
-
-        Long hits = 0L;
-        if (nonNull(viewStats) && !viewStats.isEmpty()) {
-            if (nonNull(viewStats.getFirst())) {
-                hits = viewStats.getFirst().getHits();
-            }
-        }
         Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
-
+        Long hits = getHits(request, savedEntity);
         return EventMapper.toEventFullDto(
                 savedEntity,
                 hits,
@@ -589,21 +580,12 @@ public class EventService {
                             .orElseThrow(() -> new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND));
                     log.info("[DEBUG] For event full dto {}", eventEntity);
 
-                    List<ViewStats> viewStats = getViewStats(request, eventEntity);
-                    log.info("[DEBUG] View stats {}", viewStats);
 
                     Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);
                     if (nonNull(confirmedRequests)) {
                         eventEntity.setConfirmedRequests(confirmedRequests);
                     }
-
-                    Long hits = 0L;
-                    if (nonNull(viewStats) && !viewStats.isEmpty()) {
-                        if (nonNull(viewStats.getFirst())) {
-                            hits = viewStats.getFirst().getHits();
-                        }
-                    }
-
+                    Long hits = getHits(request, eventEntity);
                     return EventMapper.toEventFullDto(
                             eventEntity,
                             hits,
@@ -632,5 +614,35 @@ public class EventService {
                 responseStats.getBody(),
                 new TypeReference<>() {
                 });
+    }
+
+    private Long getHits(HttpServletRequest request, EventEntity eventEntity) {
+        List<ViewStats> viewStats = getViewStats(request, eventEntity);
+        Long hits = 0L;
+        if (nonNull(viewStats)) {
+            if (!viewStats.isEmpty()) hits = viewStats.getFirst().getHits();
+        }
+        return hits;
+    }
+
+    private PageRequest getPageRequest(
+            String sort,
+            Integer from,
+            Integer size
+    ) {
+        String sortBy = "views";
+
+        if (nonNull(sort)) {
+            if (sort.equalsIgnoreCase("event_date")) {
+                sortBy = "eventDate";
+            }
+            return eventServiceHelper.getPageRequestWithSort(
+                    from,
+                    size,
+                    sortBy
+            );
+        } else {
+            return eventServiceHelper.getPageRequest(from, size);
+        }
     }
 }

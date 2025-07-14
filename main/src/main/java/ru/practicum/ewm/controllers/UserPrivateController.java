@@ -39,10 +39,11 @@ public class UserPrivateController {
     public ResponseEntity<List<EventShortDto>> getEvents(
             @PathVariable Long userId,
             @RequestParam(required = false, defaultValue = "0") @PositiveOrZero Integer from,
-            @RequestParam(required = false, defaultValue = "10") @Positive Integer size
+            @RequestParam(required = false, defaultValue = "10") @Positive Integer size,
+            HttpServletRequest request
     ) {
         log.info("Поступил запрос на список событий пользователя с id: {}. from: {}, size: {}", userId, from, size);
-        return ResponseEntity.ok().body(eventService.getEventsByPrivateUser(userId, from, size));
+        return ResponseEntity.ok().body(eventService.getEventsByPrivateUser(userId, from, size, request));
     }
 
     @GetMapping("/{eventId}")

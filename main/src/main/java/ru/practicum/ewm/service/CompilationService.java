@@ -62,8 +62,8 @@ public class CompilationService {
                         if (!viewStats.isEmpty()) hits = viewStats.getFirst().getHits();
                     }
                     eventEntity.setConfirmedRequests(countOfConfirmedRequests);
-                    return EventMapper.toShortEventDto(eventEntity,
-                            UserMapper.toUserShortDto(eventEntity.getInitiator()),
+                    return EventMapper.toShortEventDto(
+                            eventEntity,
                             hits,
                             countOfConfirmedRequests
                     );
@@ -207,7 +207,7 @@ public class CompilationService {
                                 }
                                 eventEntity.setConfirmedRequests(countOfConfirmedRequests);
                                 UserShortDto userShortDto = UserMapper.toUserShortDto(eventEntity.getInitiator());
-                                return EventMapper.toShortEventDto(eventEntity, userShortDto, hits, countOfConfirmedRequests);
+                                return EventMapper.toShortEventDto(eventEntity, hits, countOfConfirmedRequests);
                             }).toList();
                     return CompilationMapper.toDto(compilationEntity, eventShortDtos);
                 })
