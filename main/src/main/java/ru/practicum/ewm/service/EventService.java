@@ -47,9 +47,7 @@ public class EventService {
     private final ParticipationRequestRepository participationRequestRepository;
 
     private final EventServiceHelper eventServiceHelper;
-
     private final StatsClient statsClient;
-
     private static final String APP = "ewm-main-service";
 
     @Transactional(readOnly = true)
@@ -118,7 +116,7 @@ public class EventService {
                     List<ViewStats> viewStats = getViewStats(request, eventEntity);
                     Long hits = 0L;
                     if (nonNull(viewStats)) {
-                        if (!viewStats.isEmpty()){
+                        if (!viewStats.isEmpty()) {
                             hits = viewStats.getFirst().getHits();
                         }
                     }
@@ -463,7 +461,7 @@ public class EventService {
         if (nonNull(updateEventUserRequest.getStateAction())) {
             StateActionPrivate.isCorrectState(updateEventUserRequest.getStateAction());
             if (updateEventUserRequest.getStateAction().equals(StateActionPrivate.SEND_TO_REVIEW.getDescription())
-            || eventEntity.getState().equals(CONFIRMED)) {
+                    || eventEntity.getState().equals(CONFIRMED)) {
                 eventEntity.setState(State.PENDING);
             } else {
                 eventEntity.setState(CANCELED);

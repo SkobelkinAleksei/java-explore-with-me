@@ -1,14 +1,11 @@
 package ru.practicum.statsservice.exeption;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.DateTimeException;
 import java.time.LocalDateTime;
-import java.util.zip.DataFormatException;
 
 @RestControllerAdvice
 public class StatsServerExceptionHandler {
