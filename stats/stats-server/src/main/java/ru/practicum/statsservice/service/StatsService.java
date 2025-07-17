@@ -66,5 +66,4 @@ public class StatsService {
     ) {
         return start.isAfter(end);
     }
-
 }
