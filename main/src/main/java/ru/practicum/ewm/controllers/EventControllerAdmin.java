@@ -30,7 +30,7 @@ public class EventControllerAdmin {
             @RequestParam(required = false) List<Long> categories,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeStart,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeEnd,
-            @RequestParam(required = false, defaultValue = "0") @PositiveOrZero Integer from,
+            @RequestParam(required = false) @PositiveOrZero Integer from,
             @RequestParam(required = false, defaultValue = "10") @Positive Integer size,
             HttpServletRequest request
     ) {
