@@ -30,4 +30,11 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
        WHERE ue.id = :userId
     """)
     boolean isUserExistsById(Long userId);
+
+    @Query("""
+            SELECT us.name
+             FROM UserEntity us
+              WHERE us.id = :userId
+            """)
+    String userNameById(Long userId);
 }
