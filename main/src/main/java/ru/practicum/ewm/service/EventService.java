@@ -162,11 +162,8 @@ public class EventService {
                         .toList();
             }
         }
-
         return pageEvents;
-
     }
-
 
     @Transactional(readOnly = true)
     public EventFullDto getEventByIdWithoutUser(
@@ -202,7 +199,6 @@ public class EventService {
 
         return getEventFullDto(request, eventEntity);
     }
-
 
     @Transactional
     public List<EventFullDto> getEventsByAdmin(
@@ -594,7 +590,6 @@ public class EventService {
                 request.getRemoteAddr(),
                 LocalDateTime.now()
         );
-
         statsClient.saveHit(endpointHitDto);
 
         Integer confirmedRequests = participationRequestRepository.findByEventId(eventEntity.getId(), CONFIRMED);

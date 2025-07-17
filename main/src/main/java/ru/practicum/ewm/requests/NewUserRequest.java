@@ -22,5 +22,4 @@ public class NewUserRequest {
     @NotBlank(message = "name не может быть пустым.")
     @Size(min = 2, max = 250, message = "Количество символов от 2 до 250")
     private String name;
-
 }

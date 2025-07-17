@@ -33,6 +33,4 @@ public class UpdateEventAdminRequest {
     private Boolean paid;
 
     private Boolean requestModeration;
-
-
 }
