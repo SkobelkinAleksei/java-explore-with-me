@@ -34,4 +34,5 @@ public class StatsController {
             @RequestParam(defaultValue = "false") Boolean unique) {
         return ResponseEntity.ok(statsService.findStats(start, end, uris, unique));
     }
+
 }

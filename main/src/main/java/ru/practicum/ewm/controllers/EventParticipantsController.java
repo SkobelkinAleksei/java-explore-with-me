@@ -12,6 +12,7 @@ import ru.practicum.ewm.service.ParticipationRequestService;
 
 import java.util.List;
 
+
 @Slf4j
 @RestController
 @RequestMapping("/users/{userId}/events/{eventId}/requests")
@@ -27,6 +28,7 @@ public class EventParticipantsController {
         return ResponseEntity.ok().body(participationRequestService.getEventParticipantsByUserAndEventId(userId, eventId));
     }
 
+
     @PatchMapping
     public ResponseEntity<EventRequestStatusUpdateResult> updateParticipationRequests(
             @PathVariable("userId") Long userId,
@@ -41,4 +43,5 @@ public class EventParticipantsController {
                 )
         );
     }
+
 }

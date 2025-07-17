@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
                                 .map(StackTraceElement::toString)
                                 .toList()
                 ).message(e.getMessage())
-                .reason("BAD_REQUEST")
+                .reason("Invalid input format.")
                 .status(HttpStatus.BAD_REQUEST.toString())
                 .timestamp(LocalDateTime.now().toString()).build();
 
@@ -52,7 +52,7 @@ public class GlobalExceptionHandler {
                                 .map(StackTraceElement::toString)
                                 .toList()
                 ).message(e.getMessage())
-                .reason("FORBIDDEN")
+                .reason("FORBIDDEN.")
                 .status(HttpStatus.CONFLICT.toString())
                 .timestamp(LocalDateTime.now().toString()).build();
 
@@ -67,7 +67,7 @@ public class GlobalExceptionHandler {
                                 .map(StackTraceElement::toString)
                                 .toList()
                 ).message(e.getMessage())
-                .reason("NOT_FOUND")
+                .reason("FORBIDDEN.")
                 .status(HttpStatus.NOT_FOUND.toString())
                 .timestamp(LocalDateTime.now().toString()).build();
 

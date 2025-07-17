@@ -84,10 +84,4 @@ public interface EventRepository extends JpaRepository<EventEntity, Long>, JpaSp
 
     Page<EventEntity> findAll(Specification<EventEntity> specification, Pageable pageable);
 
-    @Query("""
-            SELECT ee.state
-            FROM EventEntity as ee
-            WHERE ee.id = :eventId
-            """)
-    State getEventStatusByEventId(Long eventId);
 }

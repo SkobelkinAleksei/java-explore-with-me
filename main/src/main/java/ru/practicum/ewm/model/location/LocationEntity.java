@@ -12,6 +12,7 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class LocationEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
