@@ -17,7 +17,4 @@ public class DefaultMessagesForException {
     public static final String CANNOT_DELETE_CATEGORY_WITH_EVENTS = "Невозможно удалить категорию со связанными событиями.";
     public static final String COMPILATION_IS_NULL = "Подборка не может быть null.";
     public static final String CATEGORY_ALREADY_EXISTS = "Категория уже существует.";
-    public static final String COMMENT_NOT_EXISTS = "Пользователь не является автором поста.";
-    public static final String COMMENT_NOT_FOUND = "Комментарий не был найден.";
-    public static final String EVENT_NOT_PUBLICISED = "Cобытие не было опубликовано.";
 }

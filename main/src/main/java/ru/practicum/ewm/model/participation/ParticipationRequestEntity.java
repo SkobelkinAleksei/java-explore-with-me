@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+//TODO сделать таблицу
 public class ParticipationRequestEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

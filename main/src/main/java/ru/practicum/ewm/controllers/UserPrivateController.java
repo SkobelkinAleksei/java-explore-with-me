@@ -65,4 +65,5 @@ public class UserPrivateController {
                 eventService.updateEventByUserIdAndEventId(userId, eventId, updateEventUserRequest, request)
         );
     }
+
 }
