@@ -21,7 +21,7 @@ public class EndpointHitMapper {
                 endpointHit.getApp(),
                 endpointHit.getUri(),
                 endpointHit.getIp(),
-                endpointHit.getTimestamp()
+                endpointHit.getCreated()
         );
     }
 }
