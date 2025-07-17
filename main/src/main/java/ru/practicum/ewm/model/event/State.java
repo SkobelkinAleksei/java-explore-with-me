@@ -31,5 +31,4 @@ public enum State {
 
         return State.valueOf(stateAction);
     }
-
 }

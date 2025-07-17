@@ -5,6 +5,7 @@ DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS compilation CASCADE;
 DROP TABLE IF EXISTS participation_request CASCADE;
+DROP TABLE IF EXISTS comment CASCADE;
 
 CREATE TABLE categories
 (
@@ -76,4 +77,17 @@ CREATE TABLE participation_request
 
     CONSTRAINT fk_event FOREIGN KEY (event_id) REFERENCES event (id),
     CONSTRAINT fk_requester FOREIGN KEY (requester_id) REFERENCES users (id)
+);
+
+CREATE TABLE comment
+(
+    id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id    BIGINT       NOT NULL,
+    event_id   BIGINT       NOT NULL,
+    message    VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users (id),
+    CONSTRAINT fk_event FOREIGN KEY (event_id) REFERENCES event (id)
 );
