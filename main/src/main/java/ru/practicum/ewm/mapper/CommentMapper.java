@@ -41,4 +41,4 @@ public class CommentMapper {
                 .createdAt(commentEntity.getCreatedAt())
                 .build();
     }
-}
+feature_comments
