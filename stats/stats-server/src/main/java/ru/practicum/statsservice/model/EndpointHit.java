@@ -27,14 +27,14 @@ public class EndpointHit {
     @Column(nullable = false)
     private String ip;
 
-    @Column(nullable = false)
+    @Column(nullable = false, name = "created")
     @JsonFormat(pattern = "yyyy-MM-dd 'T' HH:mm:ss")
-    private LocalDateTime timestamp;
+    private LocalDateTime created;
 
-    public EndpointHit(String app, String uri, String ip, LocalDateTime timestamp) {
+    public EndpointHit(String app, String uri, String ip, LocalDateTime created) {
         this.app = app;
         this.uri = uri;
         this.ip = ip;
-        this.timestamp = timestamp;
+        this.created = created;
     }
 }
