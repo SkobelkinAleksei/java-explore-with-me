@@ -169,14 +169,16 @@ public class CommentService {
     }
 
     protected void checkIsValidData(Long userId, Long eventId) {
-        if (!userRepository.isUserExistsById(userId))
+        if (!userRepository.isUserExistsById(userId)) {
             throw new EntityNotFoundException(DefaultMessagesForException.USER_NOT_FOUND);
+        }
 
-        if (!eventRepository.existsById(eventId))
+        if (!eventRepository.existsById(eventId)) {
             throw new EntityNotFoundException(DefaultMessagesForException.EVENT_NOT_FOUND);
+        }
 
         if (!commentRepository.isExistsByEventIdAndUserId(eventId, userId))
             throw new EntityNotFoundException(DefaultMessagesForException.COMMENT_NOT_EXISTS);
-    }
 
+    }
 }
