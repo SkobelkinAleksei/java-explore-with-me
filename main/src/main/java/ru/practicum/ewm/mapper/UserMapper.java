@@ -30,5 +30,4 @@ public class UserMapper {
                 .name(userEntity.getName())
                 .build();
     }
-
 }

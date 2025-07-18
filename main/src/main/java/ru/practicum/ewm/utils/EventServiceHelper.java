@@ -52,21 +52,11 @@ public class EventServiceHelper {
         return locationRepository.save(new LocationEntity(lat, lon));
     }
 
-    public PageRequest getPageRequest(
-            Integer from,
-            Integer size
-    ) {
-        if (nonNull(from)) {
-            if (from != 0) from = 0;
-        } else from = 0;
-        if (nonNull(size)) {
-            if (size != 10) size = 10;
-        } else size = 10;
+    public PageRequest getPageRequest(Integer from, Integer size) {
+        int pageFrom = (from != null) ? from : 0;
+        int pageSize = (size != null) ? size : 10;
 
-        return PageRequest.of(
-                from,
-                size
-        );
+        return PageRequest.of(pageFrom, pageSize);
     }
 
     public PageRequest getPageRequestWithSort(Integer from, Integer size, String sort) {
